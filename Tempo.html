@@ -14,11 +14,12 @@
 
 <div class="app">
   <div class="bar1">
-    <div class="brand"><i aria-hidden="true"></i>Tempo<small class="ver">v0.0.1</small></div>
+    <div class="brand"><i aria-hidden="true"></i>Tempo<small class="ver">v0.0.2</small></div>
     <select id="projSel" aria-label="プロジェクト"></select>
     <button class="btn" id="projNew" type="button">＋ プロジェクト</button>
     <button class="btn" id="projSet" type="button">設定</button>
     <button class="btn" id="saveBtn" type="button" title="バックアップフォルダに今の状態を保存（ファイル名は押した日時）">保存</button>
+    <select id="meSel" aria-label="自分" title="自分の名前（メンバー名簿から選ぶ・このブラウザに保存）"></select>
     <span class="spacer"></span>
     <select id="whoSel" aria-label="担当者で絞り込み"></select>
     <div class="seg" role="group" aria-label="表示単位">
@@ -77,6 +78,7 @@
   </form>
   <form id="projForm" hidden>
     <header><h2>プロジェクト設定</h2><button class="btn" type="button" data-close>閉じる</button></header>
+    <div class="pj">
     <label>プロジェクト名<input id="p-name" required autocomplete="off"></label>
     <footer><button class="btn pri" type="submit">保存</button></footer>
     <hr class="sep">
@@ -87,10 +89,16 @@
     <div class="order"><button class="btn" type="button" id="p-copy">JSONをコピー</button><button class="btn" type="button" id="p-import">貼り付けたJSONで置き換え</button></div>
     <div class="order">Excel（.xlsx）<button class="btn" type="button" id="p-xout">書き出す</button><button class="btn" type="button" id="p-xin">読み込んで置き換え</button><input type="file" id="p-xfile" accept=".xlsx" hidden></div>
     <hr class="sep">
+    </div>
     <div class="order">自動バックアップ（全プロジェクト）<button class="btn" type="button" id="bk-pick">保存先フォルダを選ぶ</button><button class="btn" type="button" id="bk-restore">バックアップから復元</button><input type="file" id="bk-file" accept=".json" hidden></div>
     <div class="hint" id="bk-info"></div>
     <hr class="sep">
+    <div class="order" id="sh-row">共有フォルダ（共有ドライブの data）<button class="btn" type="button" id="sh-pick">フォルダを選ぶ</button><button class="btn" type="button" id="sh-move">共有フォルダへ移動</button><button class="btn" type="button" id="sh-copy">ローカルにコピー</button></div>
+    <div class="hint" id="sh-info"></div>
+    <div class="pj">
+    <hr class="sep">
     <footer><button class="btn danger" type="button" id="projDel">このプロジェクトを削除</button></footer>
+    </div>
   </form>
 </aside>
 

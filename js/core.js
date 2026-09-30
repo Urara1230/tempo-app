@@ -26,12 +26,13 @@ const ST={todo:"未着手",ok:"順調",late:"進捗遅れ",over:"期限切れ",d
 const $=id=>document.getElementById(id);
 const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 
-let projects={}, curId=ls.get("mg.cur"), store=null, readOnly=false; // store: the backend from storage.js, null while loading
+let projects={}, curId=ls.get("mg.cur"), store=null, storeRO=false, readOnly=false; // store: the backend from storage.js, null while loading. readOnly: the open project can't be edited (storeRO, or shared and offline) — set by render
+let me=ls.get("mg.me")||""; // who I am, picked from the roster, kept in this browser
 let view={scale:ls.get("mg.scale")||"day",who:"",st:""};
 let visOrder=[];
 let collapsed=new Set(), editingId=null, dragging=false, scrolledFor=null, range=null;
 const pendingIds=new Set(), timers={};
-let sel=new Set(), lastSel=null, clip=null, delArmed=false;
+let sel=new Set(), lastSel=null, clip=null, delArmed=false, lkArmed=false; // lkArmed: ロックを解除 pressed once
 let chain=Promise.resolve();
 
 // share of the task's own workdays already past (to yesterday), 0–1
@@ -80,7 +81,7 @@ const roster=p=>p.members||members(p); // until a roster is saved, start from na
 const names=v=>v.split(/[、,，\n]/).map(s=>s.trim()).filter(Boolean);
 
 /* ---------- persistence ---------- */
-function body(p){return{name:p.name,tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[],...(p.members?{members:p.members}:{}),updatedAt:p.updatedAt}}
+function body(p){return{name:p.name,tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[],...(p.members?{members:p.members}:{}),...(p.rev?{rev:p.rev}:{}),updatedAt:p.updatedAt}}
 function applyLinks(p){
   let moved=0;const byId={};p.tasks.forEach(t=>byId[t.id]=t);
   for(let pass=0;pass<p.tasks.length+1;pass++){let ch=false;
@@ -108,7 +109,10 @@ function flush(id){
   delete timers[id];
   const p=projects[id];
   chain=chain.then(()=>p?store.put(id,body(p)):store.remove(id))
-    .catch(err=>{if(err&&err.code==="invalid_argument"){readOnly=true;toast("編集権限がないため保存できません");}else toast("保存できませんでした。もう一度お試しください")})
+    .catch(err=>{if(err&&err.code==="invalid_argument"){storeRO=true;render();toast("編集権限がないため保存できません");}
+      else if(err&&err.code==="version")toast(`新しいバージョン ${sh.newVer} があるため保存しませんでした。再読み込み（F5）してください`);
+      else if(err&&(err.code==="conflict"||err.code==="locked")){setTimeout(()=>sh.emit?.()); // show the latest content instead of the change that was not saved
+        toast(err.code==="locked"?`${err.by||"ほかの人"}さんが編集中のため、この変更は保存しませんでした`:"ほかの人が先に保存していたため、この変更は保存しませんでした。最新の内容を表示します")}else toast("保存できませんでした。もう一度お試しください")})
     .finally(()=>{if(!timers[id])pendingIds.delete(id)});
 }
 // all projects from storage (at start, and when changed elsewhere); keeps local edits not yet saved

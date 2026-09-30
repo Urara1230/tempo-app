@@ -2,14 +2,19 @@
 /* ---------- render ---------- */
 function renderToolbar(){
   const ids=Object.keys(projects).sort((a,b)=>(projects[a].name||"").localeCompare(projects[b].name||""));
-  $("projSel").innerHTML=ids.map(id=>`<option value="${esc(id)}"${id===curId?" selected":""}>${esc(projects[id].name||"無題")}</option>`).join("")||`<option>プロジェクトなし</option>`;
+  $("projSel").innerHTML=ids.map(id=>`<option value="${esc(id)}"${id===curId?" selected":""}>${projects[id].shared?"👥 ":""}${esc(projects[id].name||"無題")}</option>`).join("")||`<option>プロジェクトなし</option>`;
   const p=projects[curId];
+  readOnly=storeRO||!!(p?.shared&&(!sh.ok||sh.err||sh.newVer||!me||lockOther(p.id))); // a shared project: read-only offline, after a newer version, without a name, or while someone else edits it
   const ms=p?members(p):[];
   if(view.who&&!ms.includes(view.who))view.who="";
   $("whoSel").innerHTML=`<option value="">（全員）</option>`+ms.map(m=>`<option${m===view.who?" selected":""}>${esc(m)}</option>`).join("");
+  $("meSel").innerHTML=`<option value="">自分：未選択</option>`+[...new Set([...(p?roster(p):[]),...(me?[me]:[])])].map(m=>`<option value="${esc(m)}"${m===me?" selected":""}>自分：${esc(m)}</option>`).join("");
   $("members").innerHTML=ms.map(m=>`<option value="${esc(m)}">`).join("");
   document.querySelectorAll("[data-scale]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.scale===view.scale));
-  $("modeLbl").textContent=store?(readOnly?"閲覧のみ":store.label):"";
+  const shLbl=!p?.shared?"":!sh.dir?"共有フォルダが未設定です（閲覧のみ）":!sh.ok?"共有フォルダ：画面をクリックすると接続します（閲覧のみ）"
+    :sh.err?`共有フォルダに接続できません（最終取得 ${sh.at?new Date(sh.at).toTimeString().slice(0,5):"—"}）`
+    :sh.newVer?`新しいバージョン ${sh.newVer} があります。再読み込み（F5）してください（それまで閲覧のみ）`:"共有フォルダと同期中";
+  $("modeLbl").textContent=store?(storeRO?"閲覧のみ":shLbl||store.label):"";
   if(!p){$("stats").innerHTML="";return}
   const {rows,pct,mn,mx}=overall(p);
   const cnt={};rows.forEach(r=>cnt[r.st]=(cnt[r.st]||0)+1);
@@ -21,6 +26,11 @@ function renderToolbar(){
     (view.st?`<button type="button" class="chip" data-st="">絞り込み解除</button>`:"");
 }
 
+// edit lock line in the task table's corner (shared projects only)
+function lockBar(p){if(!p.shared||!sh.ok||sh.err||sh.newVer)return"";const o=lockOther(p.id);if(!o)lkArmed=false;
+  return`<div class="lk">${!me?"🔒 上の「自分」で名前を選ぶと編集できます"
+    :o?`🔒 ${esc(o.by||"だれか")}さんが編集中（閲覧のみ）<button type="button" class="btn danger${lkArmed?" arm":""}" data-lk="force">${lkArmed?`もう一度押すと${esc(o.by||"")}さんのロックを解除`:"ロックを解除"}</button>`
+    :sh.mine===p.id?`✏️ 編集中（ほかの人は閲覧のみ）<button type="button" class="btn" data-lk="end">編集を終了</button>`:"🔓 だれも編集していません（編集を始めると自動でロック）"}</div>`}
 function render(){
   renderToolbar();
   const chart=$("chart");
@@ -106,7 +116,7 @@ function render(){
   const sl=chart.scrollLeft,st=chart.scrollTop;
   chart.innerHTML=`<div class="grid" style="--tw:${tw}px;width:calc(var(--lw) + ${tw}px)">
     <div class="bgl" style="${bgStyle}">${bg}</div>
-    <div class="hdr"><div class="corner"><div class="c-name" style="flex:1;flex-direction:column;align-items:flex-start;gap:6px"><small style="color:var(--ink2);font-size:10.5px">マイルストーン ▶</small>タスク</div><div class="c-as">担当</div><div class="c-d">開始</div><div class="c-d">終了</div><div class="c-n" title="営業日">日数</div><div class="c-p">進捗</div></div><div class="ht" id="ht"><div class="band"></div>${top}${bot}${hint}${flags}</div></div>
+    <div class="hdr"><div class="corner"><div class="c-name" style="flex:1;flex-direction:column;align-items:flex-start;gap:6px">${lockBar(p)}<small style="color:var(--ink2);font-size:10.5px">マイルストーン ▶</small>タスク</div><div class="c-as">担当</div><div class="c-d">開始</div><div class="c-d">終了</div><div class="c-n" title="営業日">日数</div><div class="c-p">進捗</div></div><div class="ht" id="ht"><div class="band"></div>${top}${bot}${hint}${flags}</div></div>
     ${rowsHtml}${linksSvg}</div>`;
   if(scrolledFor!==curId+sc){scrolledFor=curId+sc;scrollInitial()}else{chart.scrollLeft=sl;chart.scrollTop=st}
 }

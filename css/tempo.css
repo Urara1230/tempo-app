@@ -65,6 +65,7 @@ select{padding-right:4px}
 .hdr{position:sticky;top:0;z-index:6;background:var(--panel);border-bottom:1px solid var(--line)}
 .corner{position:sticky;left:0;z-index:7;background:var(--panel);display:flex;align-items:flex-end;border-right:1px solid var(--line);font-size:11px;color:var(--ink2)}
 .corner>div{padding:0 6px 6px}
+.lk{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:11px;color:var(--ink)}.lk .btn{height:22px;padding:0 8px;font-size:11px}
 .ht{position:relative;height:74px;cursor:pointer}
 .ht .band{position:absolute;left:0;right:0;top:50px;height:24px;border-top:1px dashed var(--line2)}
 .ht .band-hint{position:absolute;top:54px;font-size:10.5px;color:var(--ink2);opacity:.7;white-space:nowrap;pointer-events:none}
@@ -186,6 +187,7 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .hint{font-size:12px;color:var(--ink2)}
 .order{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);flex-wrap:wrap}
 .order .btn{height:28px;padding:0 10px}
+.drawer .pj{display:contents}.drawer .pj[hidden]{display:none} /* project-only part of 設定 */
 .drawer footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .btn.danger{color:var(--st-over);border-color:color-mix(in srgb,var(--st-over) 50%,var(--line))}
 .btn.danger.arm{background:var(--st-over);color:#fff}

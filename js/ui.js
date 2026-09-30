@@ -1,8 +1,8 @@
 // Interactions: drawer forms, members, milestones, popups, context menu, drag & drop, selection, toolbar, keyboard.
 /* ---------- actions ---------- */
-function setCur(id){curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
+function setCur(id){if(sh.mine&&sh.mine!==id)shUnlock();lkArmed=false;curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
 function newProject(){
-  if(readOnly)return;
+  if(storeRO)return;
   const id=uid();projects[id]={id,name:"新しいプロジェクト",tasks:[]};setCur(id);save(projects[id]);openProject();
 }
 const drawer=$("drawer");
@@ -31,9 +31,10 @@ function syncForm(){
 }
 function bizHint(){const s=$("f-s").value,e=$("f-e").value;if(!s||!e)return"";if(e<s)return"終了日が開始日より前です";return`${biz(D(s),D(e))} 営業日（土日祝・会社の休日を除く）`}
 function openProject(){
-  const p=projects[curId];if(!p)return;armReset();
+  const p=projects[curId];armReset();
   drawer.hidden=false;$("taskForm").hidden=true;$("projForm").hidden=false;
-  bkInfo();$("p-name").value=p.name||"";$("p-json").value=JSON.stringify({name:p.name,members:roster(p),tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[]},null,1);rosterChips();
+  document.querySelectorAll("#projForm .pj").forEach(e=>e.hidden=!p); // without a project, only the folders (backup, shared) are offered
+  bkInfo();shInfo();if(!p)return;$("p-name").value=p.name||"";$("p-json").value=JSON.stringify({name:p.name,members:roster(p),tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[]},null,1);rosterChips();
 }
 $("f-s").addEventListener("input",()=>{if($("f-e").value<$("f-s").value)$("f-e").value=$("f-s").value;$("f-biz").textContent=bizHint()});
 $("f-e").addEventListener("input",()=>$("f-biz").textContent=bizHint());
@@ -64,7 +65,7 @@ $("taskDel").addEventListener("click",e=>{
   const b=e.currentTarget;if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="もう一度押すと削除";return}
   const p=projects[curId];p.tasks=p.tasks.filter(t=>t.id!==editingId);save(p);closeDrawer();toast("削除しました");
 });
-$("projForm").addEventListener("submit",e=>{e.preventDefault();const p=projects[curId];p.name=$("p-name").value.trim()||"無題";save(p);toast("保存しました");closeDrawer()});
+$("projForm").addEventListener("submit",e=>{e.preventDefault();const p=projects[curId];if(readOnly)return;p.name=$("p-name").value.trim()||"無題";save(p);toast("保存しました");closeDrawer()});
 $("p-copy").addEventListener("click",()=>{const v=$("p-json").value;navigator.clipboard.writeText(v).then(()=>toast("コピーしました"),()=>{$("p-json").select();toast("選択しました。Ctrl+C でコピーしてください")})});
 /* replace the current project's tasks (and milestones / members / name when given); shared by JSON and Excel import */
 function replaceData(d){
@@ -120,10 +121,10 @@ function bkInfo(){
     :!bk.dir?"未設定：フォルダを選ぶと、変更のたびに auto.backup.json を上書き保存し、「保存」ボタンで日時のファイルを追加します"
     :!bk.ok?`保存先「${bk.dir.name}」：次の編集時にフォルダへのアクセス許可を確認します`
     :`保存先「${bk.dir.name}」　自動：auto.backup.json${bk.last?`（${bk.last}）`:""}　手動：${bk.saved||"まだ保存していません"}`}
-async function pickDir(){bk.dir=await showDirectoryPicker({id:"tempo-backup",mode:"readwrite"});bk.ok=true;bk.asked=true;await kv("readwrite",s=>s.put(bk.dir,"bkDir"))}
+async function pickDir(){const d=await showDirectoryPicker({id:"tempo-backup",mode:"readwrite"});if(sh.dir&&await sh.dir.isSameEntry(d))throw Object.assign(new Error("same"),{code:"same"});bk.dir=d;bk.ok=true;bk.asked=true;await kv("readwrite",s=>s.put(bk.dir,"bkDir"))}
 $("bk-pick").addEventListener("click",async()=>{
   try{await pickDir();backupSoon();bkInfo();toast("バックアップ先を設定しました")}
-  catch(e){if(e.name!=="AbortError")toast("フォルダを選べませんでした")}});
+  catch(e){if(e.name!=="AbortError")toast(e.code==="same"?"共有フォルダと同じフォルダは選べません":"フォルダを選べませんでした")}});
 $("saveBtn").addEventListener("click",async()=>{const n=bkStamp()+".backup.json"; // named by the moment the button is pressed
   try{
     if(!bk.dir)await pickDir();
@@ -132,16 +133,30 @@ $("saveBtn").addEventListener("click",async()=>{const n=bkStamp()+".backup.json"
     await bkWrite(n);bk.saved=n;bkInfo();toast(`保存しました：${n}`);
   }catch(e){if(e.name!=="AbortError")toast("保存できませんでした。保存先フォルダを確認してください")}});
 $("bk-restore").addEventListener("click",()=>$("bk-file").click());
-$("bk-file").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f||readOnly)return;
+$("bk-file").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f||storeRO)return;
   let all;try{all=JSON.parse(await f.text());if(!all||!Object.values(all).length||!Object.values(all).every(p=>p&&Array.isArray(p.tasks)))throw 0}
   catch(err){toast("バックアップファイルを読み取れませんでした");return}
   // keep the state before the restore in one file, overwritten each time: auto.backup.json is about to hold the restored data
   const pre="before-restore.backup.json";let kept=false;if(bk.ok)try{await bkWrite(pre);kept=true}catch(err){}
-  Object.entries(all).forEach(([id,p])=>{projects[id]={id,name:String(p.name||"無題"),tasks:p.tasks,milestones:Array.isArray(p.milestones)?p.milestones:[],holidays:Array.isArray(p.holidays)?p.holidays:[],...(Array.isArray(p.members)?{members:p.members}:{})};save(projects[id])});
+  Object.entries(all).forEach(([id,p])=>{projects[id]={id,name:String(p.name||"無題"),tasks:p.tasks,milestones:Array.isArray(p.milestones)?p.milestones:[],holidays:Array.isArray(p.holidays)?p.holidays:[],...(Array.isArray(p.members)?{members:p.members}:{}),...(projects[id]?.shared?{shared:true,rev:projects[id].rev}:{})};save(projects[id])});
   closeDrawer();toast(`${Object.keys(all).length} 件のプロジェクトを復元しました`+(kept?`（復元前の状態は ${pre} に保存）`:""));
 });
+/* shared folder (storage.js): pick it, move the open project there, copy a shared one back as a separate local project */
+function shInfo(){const p=projects[curId],on=store===backends.local&&!!window.showDirectoryPicker;
+  $("sh-row").hidden=$("sh-info").hidden=!on;$("sh-move").hidden=!p||!!p.shared||!sh.dir;$("sh-copy").hidden=!p?.shared;
+  $("sh-info").textContent=!sh.dir?"未設定：共有ドライブの「data」フォルダを選ぶと、プロジェクトを共有できます（名前が data のフォルダだけ選べます）"
+    :`共有フォルダ「${sh.dir.name}」　共有プロジェクト ${Object.keys(sh.data).length} 件（一覧で 👥）${p?`　このプロジェクト：${p.shared?"共有":"ローカル（このブラウザだけ。「共有フォルダへ移動」を押すまで共有フォルダには保存されません）"}`:""}`}
+$("sh-pick").addEventListener("click",async()=>{try{await shPick();shInfo();render();const n=Object.keys(sh.data).length;
+    toast(n?`共有フォルダを設定しました。共有プロジェクト ${n} 件は上のプロジェクト一覧（👥）から開けます`:"共有フォルダを設定しました（共有プロジェクトはまだありません）")}
+  catch(e){if(e.name!=="AbortError")toast(e.code==="name"?`「data」という名前のフォルダを選んでください（選んだフォルダ：${e.picked}）`:e.code==="same"?"バックアップ先と同じフォルダは選べません":"フォルダを選べませんでした")}});
+$("sh-move").addEventListener("click",async()=>{const p=projects[curId];if(!p||p.shared||storeRO)return;
+  if(!sh.ok||sh.err){toast("共有フォルダに接続できません");return}
+  if(!me){toast("先に上の「自分」で名前を選んでください");return}
+  try{setCur(await shMove(p));toast("共有フォルダへ移動しました")}catch(e){toast("移動できませんでした。共有フォルダを確認してください")}});
+$("sh-copy").addEventListener("click",()=>{const p=projects[curId];if(!p?.shared||storeRO)return;const id=uid(),d=JSON.parse(JSON.stringify(body(p)));delete d.rev;
+  projects[id]={...d,id,name:(p.name||"無題")+"（コピー）"};setCur(id);save(projects[id]);toast("ローカルにコピーしました")});
 $("projDel").addEventListener("click",e=>{
-  const b=e.currentTarget;if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="もう一度押すと完全に削除";return}
+  const b=e.currentTarget;if(readOnly)return;if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="もう一度押すと完全に削除";return}
   const id=curId;delete projects[id];queue(id);closeDrawer();setCur(Object.keys(projects)[0]||null);toast("プロジェクトを削除しました");
 });
 drawer.addEventListener("click",e=>{if(e.target.closest("[data-close]"))closeDrawer()});
@@ -150,6 +165,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!drawer.hidden)clos
 $("projSel").addEventListener("change",e=>setCur(e.target.value));
 $("projNew").addEventListener("click",newProject);
 $("projSet").addEventListener("click",openProject);
+$("meSel").addEventListener("change",e=>{me=e.target.value;ls.set("mg.me",me);render()});
 $("whoSel").addEventListener("change",e=>{view.who=e.target.value;render()});
 $("addBtn").addEventListener("click",()=>cmd("add"));
 $("todayBtn").addEventListener("click",scrollToToday);
@@ -197,6 +213,11 @@ document.addEventListener("pointerdown",e=>{if(!pop.hidden&&!pop.contains(e.targ
 const chart=$("chart");
 chart.addEventListener("click",e=>{
   if(e.target.closest("[data-pg]"))return;
+  const lk=e.target.closest("[data-lk]");if(lk){const id=curId; // edit lock: 編集を終了 / ロックを解除 (twice)
+    if(lk.dataset.lk==="end")shUnlock().then(()=>{render();toast("編集を終了しました")});
+    else if(!lkArmed){lkArmed=true;render()}
+    else{lkArmed=false;shForce(id).then(()=>{render();toast("ロックを解除しました")},()=>toast("ロックを解除できませんでした"))}
+    return}
   const as=e.target.closest("[data-as]");if(as){asEdit&&asEdit.id===as.dataset.as?closeAsPick():openAsPick(as);return}
   const fl=e.target.closest("[data-ms]");if(fl){openMs(null,fl.dataset.ms,e.clientX,e.clientY);return}
   const ht=e.target.closest("#ht");if(ht&&range){const n=range.a+Math.floor((e.clientX-ht.getBoundingClientRect().left)/range.dw);if(n>=range.a&&n<=range.b)openMs(S(n),null,e.clientX,e.clientY);return}
