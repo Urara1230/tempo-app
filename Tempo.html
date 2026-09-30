@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tempo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/tempo.css">
+</head>
+<body style="margin:0">
+
+
+<div class="app">
+  <div class="bar1">
+    <div class="brand"><i aria-hidden="true"></i>Tempo</div>
+    <select id="projSel" aria-label="プロジェクト"></select>
+    <button class="btn" id="projNew" type="button">＋ プロジェクト</button>
+    <button class="btn" id="projSet" type="button">設定</button>
+    <button class="btn" id="saveBtn" type="button" title="バックアップフォルダに今の状態を保存（ファイル名は押した日時）">保存</button>
+    <span class="spacer"></span>
+    <select id="whoSel" aria-label="担当者で絞り込み"></select>
+    <div class="seg" role="group" aria-label="表示単位">
+      <button type="button" data-scale="day">日</button><button type="button" data-scale="week">週</button><button type="button" data-scale="month">月</button>
+    </div>
+    <button class="btn" id="todayBtn" type="button">今日</button>
+    <button class="btn pri" id="addBtn" type="button">＋ タスク</button>
+  </div>
+  <div class="bar2">
+    <div class="stats" id="stats"></div>
+    <span class="spacer"></span>
+    <span class="mode" id="modeLbl"></span>
+  </div>
+  <div class="tools" id="tools" role="toolbar" aria-label="編集ツールバー">
+    <button class="tb" type="button" data-cmd="undo" title="元に戻す（Ctrl+Z）" aria-label="元に戻す"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 4 3.5 7.5 7 11"/><path d="M3.5 7.5H12a4.5 4.5 0 0 1 0 9H8"/></svg></button>
+    <button class="tb" type="button" data-cmd="redo" title="やり直す（Ctrl+Y）" aria-label="やり直す"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M13 4l3.5 3.5L13 11"/><path d="M16.5 7.5H8a4.5 4.5 0 0 0 0 9h4"/></svg></button>
+    <span class="sep2"></span>
+    <button class="tb" type="button" data-cmd="copy" title="コピー（Ctrl+C）" aria-label="コピー"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="6.5" y="6.5" width="10" height="11" rx="1.5"/><path d="M4 13.5V4a1.5 1.5 0 0 1 1.5-1.5H13"/></svg></button>
+    <button class="tb" type="button" data-cmd="paste" title="貼り付け（Ctrl+V）" aria-label="貼り付け"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="4" y="4" width="12" height="14" rx="1.5"/><rect x="7" y="2" width="6" height="3.5" rx="1"/><path d="M7 10h6M7 13h4"/></svg></button>
+    <span class="sep2"></span>
+    <button class="tb" type="button" data-cmd="insAbove" title="上にタスクを挿入" aria-label="上に挿入"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="11" width="14" height="6" rx="1"/><path d="M10 2.5v6M7 5.5h6"/></svg></button>
+    <button class="tb" type="button" data-cmd="insBelow" title="下にタスクを挿入" aria-label="下に挿入"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="14" height="6" rx="1"/><path d="M10 11.5v6M7 14.5h6"/></svg></button>
+    <button class="tb" type="button" data-cmd="indent" title="子タスクにする（Tab）" aria-label="インデント"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4h14M9 8.5h8M9 12h8M3 16h14M3 8l3 2.2L3 12.4"/></svg></button>
+    <button class="tb" type="button" data-cmd="outdent" title="階層を上げる（Shift+Tab）" aria-label="アウトデント"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4h14M9 8.5h8M9 12h8M3 16h14M6 8L3 10.2 6 12.4"/></svg></button>
+    <button class="tb" type="button" data-cmd="up" title="上へ移動（Alt+↑）" aria-label="上へ移動"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M10 17V4M5.5 8.5 10 4l4.5 4.5M4 2.5h12"/></svg></button>
+    <button class="tb" type="button" data-cmd="down" title="下へ移動（Alt+↓）" aria-label="下へ移動"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M10 3v13M5.5 11.5 10 16l4.5-4.5M4 17.5h12"/></svg></button>
+    <span class="sep2"></span>
+    <button class="tb" type="button" data-cmd="link" title="タスクをリンク（選んだ順につなぐ・前工程が延びたら後ろを自動でずらす）" aria-label="リンク"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8.5 11.5l3-3M7 9 5 11a2.8 2.8 0 0 0 4 4l2-2M13 11l2-2a2.8 2.8 0 0 0-4-4L9 7"/></svg></button>
+    <button class="tb" type="button" data-cmd="unlink" title="リンクを解除" aria-label="リンク解除"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 9 5 11a2.8 2.8 0 0 0 4 4l2-2M13 11l2-2a2.8 2.8 0 0 0-4-4L9 7M3 3l2 2M17 17l-2-2"/></svg></button>
+    <span class="sep2"></span>
+    <button class="tb" type="button" data-cmd="asAdd" title="担当者を追加" aria-label="担当者を追加"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="6.5" r="3"/><path d="M2.5 17c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M15.5 8v6M12.5 11h6" stroke="var(--st-ok)" stroke-width="1.8"/></svg></button>
+    <button class="tb" type="button" data-cmd="asDel" title="担当者を外す" aria-label="担当者を外す"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="6.5" r="3"/><path d="M2.5 17c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><path d="M13 9l5 5M18 9l-5 5" stroke="var(--st-over)" stroke-width="1.8"/></svg></button>
+    <button class="tb" type="button" data-cmd="edit" title="詳細を編集（Enter / ダブルクリック）" aria-label="詳細を編集"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 16l1-4 8.5-8.5 3 3L8 15z M12 5l3 3"/></svg></button>
+    <button class="tb good" type="button" data-cmd="add" title="タスクを追加" aria-label="タスクを追加"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M10 6v8M6 10h8" stroke="#fff" stroke-width="2"/></svg></button>
+    <button class="tb bad" type="button" data-cmd="del" title="削除（Delete を 2 回）" aria-label="削除"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M7 7l6 6M13 7l-6 6" stroke="#fff" stroke-width="2"/></svg></button>
+    <span class="selinfo" id="selInfo"></span>
+    <form class="asform" id="asForm" hidden><span id="asLbl"></span><input id="asIn" list="members" placeholder="担当者名" autocomplete="off"><select id="asSel"></select><button class="btn pri" type="submit" id="asOk">追加</button><button class="btn" type="button" id="asCancel">やめる</button></form>
+  </div>
+  <div class="chart" id="chart"><div class="empty">読み込み中…</div></div>
+</div>
+
+<datalist id="members"></datalist>
+
+<aside class="drawer" id="drawer" hidden>
+  <form id="taskForm" hidden>
+    <header><h2>タスク編集</h2><button class="btn" type="button" data-close>閉じる</button></header>
+    <label>タスク名<input id="f-name" required autocomplete="off"></label>
+    <label>担当者（「、」か「,」で区切る）<input id="f-as" list="members" autocomplete="off"></label>
+    <div class="mem" id="f-mem" aria-label="メンバーから選ぶ"></div>
+    <div class="two"><label>開始日<input type="date" id="f-s"></label><label>終了日<input type="date" id="f-e"></label></div>
+    <div class="hint" id="f-biz"></div>
+    <label>進捗 <output id="f-po">0%</output><input type="range" id="f-p" min="0" max="100" step="5"></label>
+    <label class="chk"><input type="checkbox" id="f-ms">マイルストーン（◆で表示）</label>
+    <label>メモ<textarea id="f-memo" rows="3"></textarea></label>
+    <footer><button class="btn pri" type="submit">保存</button><button class="btn danger" type="button" id="taskDel">削除</button></footer>
+  </form>
+  <form id="projForm" hidden>
+    <header><h2>プロジェクト設定</h2><button class="btn" type="button" data-close>閉じる</button></header>
+    <label>プロジェクト名<input id="p-name" required autocomplete="off"></label>
+    <footer><button class="btn pri" type="submit">保存</button></footer>
+    <hr class="sep">
+    <label>メンバー（「、」で区切って複数追加できます）<div class="addm"><input id="p-mem" autocomplete="off" placeholder="名前"><button class="btn" type="button" id="p-memAdd">追加</button></div></label>
+    <div class="mem" id="p-mems"></div>
+    <hr class="sep">
+    <label>データ（JSON）<textarea id="p-json" rows="7" spellcheck="false" style="font-family:var(--mono);font-size:11px"></textarea></label>
+    <div class="order"><button class="btn" type="button" id="p-copy">JSONをコピー</button><button class="btn" type="button" id="p-import">貼り付けたJSONで置き換え</button></div>
+    <div class="order">Excel（.xlsx）<button class="btn" type="button" id="p-xout">書き出す</button><button class="btn" type="button" id="p-xin">読み込んで置き換え</button><input type="file" id="p-xfile" accept=".xlsx" hidden></div>
+    <hr class="sep">
+    <div class="order">自動バックアップ（全プロジェクト）<button class="btn" type="button" id="bk-pick">保存先フォルダを選ぶ</button><button class="btn" type="button" id="bk-restore">バックアップから復元</button><input type="file" id="bk-file" accept=".json" hidden></div>
+    <div class="hint" id="bk-info"></div>
+    <hr class="sep">
+    <footer><button class="btn danger" type="button" id="projDel">このプロジェクトを削除</button></footer>
+  </form>
+</aside>
+
+<div class="pop ctx" id="ctxMenu" role="menu" hidden><button type="button" role="menuitem" id="ctxRename">名前を変更</button><div class="ctxc" id="ctxColor" hidden>色<input type="color" id="ctxPc" aria-label="親タスクの色"><button type="button" id="ctxPcOk">決定</button><button type="button" id="ctxPcNone">既定の色</button></div></div>
+<div class="pop aspop" id="asPop" hidden><div class="mem" id="asMem" aria-label="担当者を選ぶ"></div></div>
+<div class="pop pgpop" id="pgPop" hidden><input type="range" id="pgR" min="0" max="100" step="5" aria-label="進捗"><button class="btn" type="button" id="pgBack">戻す</button></div>
+<form class="pop" id="msPop" hidden>
+  <h3><span id="msFlagIco"></span><span id="msTitle"></span></h3>
+  <div class="colors" role="radiogroup" aria-label="色の選択">色の選択
+    <label><input type="radio" name="msc" value="blue" id="msc-blue"><span class="mc-blue" data-flag></span></label>
+    <label><input type="radio" name="msc" value="red" id="msc-red"><span class="mc-red" data-flag></span></label>
+    <label><input type="radio" name="msc" value="green" id="msc-green"><span class="mc-green" data-flag></span></label>
+    <label><input type="radio" name="msc" value="yellow" id="msc-yellow"><span class="mc-yellow" data-flag></span></label>
+    <label><input type="radio" name="msc" value="purple" id="msc-purple"><span class="mc-purple" data-flag></span></label>
+  </div>
+  <input type="text" id="msName" placeholder="タイトルを入力（例：α版提出）" autocomplete="off">
+  <div class="colors">会社の休日<input type="color" id="holColor" aria-label="休日の色"><button class="btn" type="button" id="holTgl">休日にする</button></div>
+  <div class="acts"><button class="btn danger" type="button" id="msDel" hidden>削除</button><button class="btn pri" type="submit" id="msOk">登録する</button><button class="btn" type="button" id="msCancel">キャンセル</button></div>
+</form>
+
+<script src="js/holidays.js"></script>
+<script src="js/core.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/xlsx.js"></script>
+<script src="js/view.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/boot.js"></script>
+
+</body>
+</html>
