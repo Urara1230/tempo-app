@@ -65,6 +65,8 @@ select{padding-right:4px}
 .hdr{position:sticky;top:0;z-index:6;background:var(--panel);border-bottom:1px solid var(--line)}
 .corner{position:sticky;left:0;z-index:7;background:var(--panel);display:flex;align-items:flex-end;border-right:1px solid var(--line);font-size:11px;color:var(--ink2)}
 .corner>div{padding:0 6px 6px}
+.lwh{position:absolute;top:0;bottom:0;right:-4px;width:7px;cursor:col-resize;touch-action:none;z-index:1}
+.lwh:hover{background:color-mix(in srgb,var(--accent) 45%,transparent)}
 .lk{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:11px;color:var(--ink)}.lk .btn{height:22px;padding:0 8px;font-size:11px}
 .ht{position:relative;height:74px;cursor:pointer}
 .ht .band{position:absolute;left:0;right:0;top:50px;height:24px;border-top:1px dashed var(--line2)}

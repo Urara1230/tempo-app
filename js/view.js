@@ -13,7 +13,7 @@ function renderToolbar(){
   document.querySelectorAll("[data-scale]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.scale===view.scale));
   const shLbl=!p?.shared?"":!sh.dir?"共有フォルダが未設定です（閲覧のみ）":!sh.ok?"共有フォルダ：画面をクリックすると接続します（閲覧のみ）"
     :sh.err?`共有フォルダに接続できません（最終取得 ${sh.at?new Date(sh.at).toTimeString().slice(0,5):"—"}）`
-    :sh.newVer?`新しいバージョン ${sh.newVer} があります。再読み込み（F5）してください（それまで閲覧のみ）`:"共有フォルダと同期中";
+    :sh.newVer?`新しいバージョン ${sh.newVer} があります。Tempo.bat から開き直してください（それまで閲覧のみ）`:"共有フォルダと同期中";
   $("modeLbl").textContent=store?(storeRO?"閲覧のみ":shLbl||store.label):"";
   if(!p){$("stats").innerHTML="";return}
   const {rows,pct,mn,mx}=overall(p);
@@ -116,7 +116,7 @@ function render(){
   const sl=chart.scrollLeft,st=chart.scrollTop;
   chart.innerHTML=`<div class="grid" style="--tw:${tw}px;width:calc(var(--lw) + ${tw}px)">
     <div class="bgl" style="${bgStyle}">${bg}</div>
-    <div class="hdr"><div class="corner"><div class="c-name" style="flex:1;flex-direction:column;align-items:flex-start;gap:6px">${lockBar(p)}<small style="color:var(--ink2);font-size:10.5px">マイルストーン ▶</small>タスク</div><div class="c-as">担当</div><div class="c-d">開始</div><div class="c-d">終了</div><div class="c-n" title="営業日">日数</div><div class="c-p">進捗</div></div><div class="ht" id="ht"><div class="band"></div>${top}${bot}${hint}${flags}</div></div>
+    <div class="hdr"><div class="corner"><div class="c-name" style="flex:1;flex-direction:column;align-items:flex-start;gap:6px">${lockBar(p)}<small style="color:var(--ink2);font-size:10.5px">マイルストーン ▶</small>タスク</div><div class="c-as">担当</div><div class="c-d">開始</div><div class="c-d">終了</div><div class="c-n" title="営業日">日数</div><div class="c-p">進捗</div><i class="lwh" title="ドラッグで幅を変更"></i></div><div class="ht" id="ht"><div class="band"></div>${top}${bot}${hint}${flags}</div></div>
     ${rowsHtml}${linksSvg}</div>`;
   if(scrolledFor!==curId+sc){scrolledFor=curId+sc;scrollInitial()}else{chart.scrollLeft=sl;chart.scrollTop=st}
 }

@@ -144,7 +144,8 @@ $("bk-file").addEventListener("change",async e=>{const f=e.target.files[0];e.tar
 /* shared folder (storage.js): pick it, move the open project there, copy a shared one back as a separate local project */
 function shInfo(){const p=projects[curId],on=store===backends.local&&!!window.showDirectoryPicker;
   $("sh-row").hidden=$("sh-info").hidden=!on;$("sh-move").hidden=!p||!!p.shared||!sh.dir;$("sh-copy").hidden=!p?.shared;
-  $("sh-info").textContent=!sh.dir?"未設定：共有ドライブの「data」フォルダを選ぶと、プロジェクトを共有できます（名前が data のフォルダだけ選べます）"
+  $("sh-info").textContent=location.host?"共有ドライブ上の Tempo.html を直接開いています。共有フォルダを使うには Tempo.bat から開いてください" // page opened from a network path: Chrome won't let it use folders
+    :!sh.dir?"未設定：共有ドライブの「data」フォルダを選ぶと、プロジェクトを共有できます（名前が data のフォルダだけ選べます）"
     :`共有フォルダ「${sh.dir.name}」　共有プロジェクト ${Object.keys(sh.data).length} 件（一覧で 👥）${p?`　このプロジェクト：${p.shared?"共有":"ローカル（このブラウザだけ。「共有フォルダへ移動」を押すまで共有フォルダには保存されません）"}`:""}`}
 $("sh-pick").addEventListener("click",async()=>{try{await shPick();shInfo();render();const n=Object.keys(sh.data).length;
     toast(n?`共有フォルダを設定しました。共有プロジェクト ${n} 件は上のプロジェクト一覧（👥）から開けます`:"共有フォルダを設定しました（共有プロジェクトはまだありません）")}
@@ -312,6 +313,13 @@ function endRowDrag(e){if(!rd)return;const d=rd;rd=null;clearTimeout(d.t);if(!d.
   if(d.to&&e.type==="pointerup")moveBlock(projects[curId],d.tops,d.to.id,d.to.w);else render()}
 document.addEventListener("pointerup",endRowDrag);document.addEventListener("keydown",e=>{if(e.key==="Escape"&&rd)endRowDrag(e)});document.addEventListener("pointercancel",endRowDrag);
 chart.addEventListener("click",e=>{if(noClick)e.stopImmediatePropagation()},true); // the drop is not a click
+
+/* task table width: drag the corner's right edge; kept in this browser */
+let lwd=null;const setLw=w=>document.documentElement.style.setProperty("--lw",w+"px");
+if(+ls.get("mg.lw"))setLw(+ls.get("mg.lw"));
+chart.addEventListener("pointerdown",e=>{if(e.button||!e.target.classList.contains("lwh"))return;lwd={x:e.clientX,w0:e.target.parentNode.offsetWidth};e.preventDefault()});
+document.addEventListener("pointermove",e=>{if(lwd)setLw(lwd.w=Math.round(Math.max(160,Math.min(innerWidth-120,lwd.w0+e.clientX-lwd.x))))});
+document.addEventListener("pointerup",()=>{if(lwd&&lwd.w)ls.set("mg.lw",lwd.w);lwd=null});
 
 /* drag bars */
 let drag=null;

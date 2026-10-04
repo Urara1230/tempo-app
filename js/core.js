@@ -110,7 +110,7 @@ function flush(id){
   const p=projects[id];
   chain=chain.then(()=>p?store.put(id,body(p)):store.remove(id))
     .catch(err=>{if(err&&err.code==="invalid_argument"){storeRO=true;render();toast("編集権限がないため保存できません");}
-      else if(err&&err.code==="version")toast(`新しいバージョン ${sh.newVer} があるため保存しませんでした。再読み込み（F5）してください`);
+      else if(err&&err.code==="version")toast(`新しいバージョン ${sh.newVer} があるため保存しませんでした。Tempo.bat から開き直してください`);
       else if(err&&(err.code==="conflict"||err.code==="locked")){setTimeout(()=>sh.emit?.()); // show the latest content instead of the change that was not saved
         toast(err.code==="locked"?`${err.by||"ほかの人"}さんが編集中のため、この変更は保存しませんでした`:"ほかの人が先に保存していたため、この変更は保存しませんでした。最新の内容を表示します")}else toast("保存できませんでした。もう一度お試しください")})
     .finally(()=>{if(!timers[id])pendingIds.delete(id)});
