@@ -10,19 +10,20 @@ function renderToolbar(){
   $("whoSel").innerHTML=`<option value="">（全員）</option>`+ms.map(m=>`<option${m===view.who?" selected":""}>${esc(m)}</option>`).join("");
   $("meSel").innerHTML=`<option value="">自分：未選択</option>`+[...new Set([...(p?roster(p):[]),...(me?[me]:[])])].map(m=>`<option value="${esc(m)}"${m===me?" selected":""}>自分：${esc(m)}</option>`).join("");
   $("members").innerHTML=ms.map(m=>`<option value="${esc(m)}">`).join("");
-  document.querySelectorAll("[data-scale]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.scale===view.scale));
+  document.querySelectorAll("[data-scale]").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.scale===view.scale);b.disabled=view.list});$("todayBtn").disabled=view.list; // no timeline in 一覧
+  document.querySelectorAll("[data-view]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.view==="list")===view.list));
   const shLbl=!p?.shared?"":!sh.dir?"共有フォルダが未設定です（閲覧のみ）":!sh.ok?"共有フォルダ：画面をクリックすると接続します（閲覧のみ）"
     :sh.err?`共有フォルダに接続できません（最終取得 ${sh.at?new Date(sh.at).toTimeString().slice(0,5):"—"}）`
     :sh.newVer?`新しいバージョン ${sh.newVer} があります。Tempo.bat から開き直してください（それまで閲覧のみ）`:"共有フォルダと同期中";
   $("modeLbl").textContent=store?(storeRO?"閲覧のみ":shLbl||store.label):"";
-  if(!p){$("stats").innerHTML="";return}
+  if(!p){$("stats").innerHTML=$("chips").innerHTML="";return}
   const {rows,pct,mn,mx}=overall(p);
   const cnt={};rows.forEach(r=>cnt[r.st]=(cnt[r.st]||0)+1);
   const period=rows.length?`${S(mn).replaceAll("-","/")}〜${S(mx).replaceAll("-","/")}`:"—";
   const nxt=(p.milestones||[]).filter(m=>D(m.date)>=TODAY).sort((x,y)=>x.date<y.date?-1:1)[0];
   const nxtHtml=nxt?`<span class="nextms mc-${nxt.color||"blue"}">次の節目 ${FLAG} <b>${md(D(nxt.date))} ${esc(nxt.title)}</b>（あと${D(nxt.date)-TODAY}日・${biz(TODAY,D(nxt.date))}営業日）</span>`:"";
-  $("stats").innerHTML=`<span>期間 <b>${period}</b></span>`+nxtHtml+`<span>全体進捗 <b>${pct}%</b><span class="meter"><span style="width:${pct}%"></span></span></span>`+
-    Object.keys(ST).filter(k=>cnt[k]).map(k=>`<button type="button" class="chip st-${k}" data-st="${k}" aria-pressed="${view.st===k}"><span class="dot"></span>${ST[k]} <span class="n">${cnt[k]}</span></button>`).join("")+
+  $("stats").innerHTML=`<span>期間 <b>${period}</b></span>`+nxtHtml+`<span>全体進捗 <b>${pct}%</b><span class="meter"><span style="width:${pct}%"></span></span></span>`;
+  $("chips").innerHTML=Object.keys(ST).filter(k=>cnt[k]).map(k=>`<button type="button" class="chip st-${k}" data-st="${k}" aria-pressed="${view.st===k}"><span class="dot"></span>${ST[k]} <span class="n">${cnt[k]}</span></button>`).join("")+
     (view.st?`<button type="button" class="chip" data-st="">絞り込み解除</button>`:"");
 }
 
@@ -31,6 +32,11 @@ function lockBar(p){if(!p.shared||!sh.ok||sh.err||sh.newVer)return"";const o=loc
   return`<div class="lk">${!me?"🔒 上の「自分」で名前を選ぶと編集できます"
     :o?`🔒 ${esc(o.by||"だれか")}さんが編集中（閲覧のみ）<button type="button" class="btn danger${lkArmed?" arm":""}" data-lk="force">${lkArmed?`もう一度押すと${esc(o.by||"")}さんのロックを解除`:"ロックを解除"}</button>`
     :sh.mine===p.id?`✏️ 編集中（ほかの人は閲覧のみ）<button type="button" class="btn" data-lk="end">編集を終了</button>`:"🔓 だれも編集していません（編集を始めると自動でロック）"}</div>`}
+// 一覧 view, 完了 column: a leaf has a checkbox (100% ⇄ 0%); a parent shows 完了 when every task under it is done, else done / all
+function doneCell(all,r){
+  if(!r.parent)return readOnly?(r.progress>=100?"完了":"未完了"):`<input type="checkbox" data-done="${r.id}"${r.progress>=100?" checked":""} aria-label="完了">`;
+  let n=0,d=0;for(let j=r.idx+1;j<all.length&&all[j].level>r.level;j++)if(!all[j].parent){n++;if(all[j].progress>=100)d++}
+  return d===n?"完了":`${d}/${n}`}
 function render(){
   renderToolbar();
   const chart=$("chart");
@@ -38,7 +44,7 @@ function render(){
   const p=projects[curId];
   if(!p){chart.innerHTML=`<div class="empty"><div>プロジェクトがまだありません。</div><button class="btn pri" type="button" data-act="newproj">プロジェクトを作成</button></div>`;return}
   const all=derive(p);
-  const sc=view.scale, dw=sc==="day"?30:sc==="week"?12:4;
+  const sc=view.scale, list=view.list, dw=sc==="day"?30:sc==="week"?12:4;
   let mn=TODAY,mx=TODAY;all.forEach(r=>{mn=Math.min(mn,D(r.start));mx=Math.max(mx,D(r.end))});(p.milestones||[]).forEach(m=>{mn=Math.min(mn,D(m.date));mx=Math.max(mx,D(m.date))});
   // today ± half a year, stretched only to cover this project's own dates
   let a=Math.min(TODAY-183,mn-10),b=Math.max(TODAY+183,mx+10);
@@ -77,8 +83,9 @@ function render(){
   const bgStyle=sc==="day"?`background-image:repeating-linear-gradient(to right,transparent 0 ${dw-1}px,var(--line2) ${dw-1}px ${dw}px)`:"";
 
   // rows (collapse + filter)
-  const filtering=view.who||view.st;
-  const match=r=>(!view.who||r.assignees.includes(view.who))&&(!view.st||r.st===view.st);
+  const q=view.q,filtering=view.who||view.st||q;
+  const qa=[],qok=all.map(r=>{qa[r.level]=!q||r.name.toLowerCase().includes(q);return qa.slice(0,r.level+1).some(Boolean)}); // search: its own name, or a parent's (a ticket is found with everything under it)
+  const match=r=>(!view.who||r.assignees.includes(view.who))&&(!view.st||r.st===view.st)&&qok[r.idx];
   const visible=new Array(all.length).fill(true);
   if(filtering){
     for(let i=all.length-1;i>=0;i--){
@@ -102,7 +109,7 @@ function render(){
       mark=`<div class="bar st-${r.st}${r.parent?" sum":""}${urg?" urg dl"+delay(r):""}" data-bar="${r.id}" style="left:${x}px;width:${w}px" title="${esc(r.name)}｜${md(s)}〜${md(e)}｜${r.progress}%｜${ST[r.st]}"><div class="fill" style="width:${r.progress}%"></div>${!r.parent&&w>50?`<span class="bl">${esc(r.name)}</span>`:""}${r.parent?"":`<i class="h l"></i><i class="h r"></i>`}</div><span class="who" style="left:${x+w+6}px">${lab(r,s,e)}</span>`;
     }
     rowsHtml+=`<div class="row${r.parent?" parent":""}${r.parent?" pc":""}${r.id===editingId||sel.has(r.id)?" sel":""}"${r.parent?` style="--pc:${parColor(r)}"`:""} data-id="${r.id}">
-      <div class="lc" data-open="${r.id}"><div class="c-name" style="padding-left:${6+r.level*18}px">${r.parent?`<button type="button" class="tg" data-tg="${r.id}" aria-label="折りたたみ">${collapsed.has(r.id)?"▸":"▾"}</button>`:`<span class="dot st-${r.st}" title="${ST[r.st]}"></span>`}<span class="tn">${esc(r.name)}</span></div><div class="c-as">${r.parent||readOnly?esc(who):`<button type="button" class="asbox${who?"":" none"}" data-as="${r.id}" aria-label="担当者を選ぶ" title="${esc(who)}"><span>${esc(who)||"担当なし"}</span><b aria-hidden="true">${who?"▾":"＋"}</b></button>`}</div><div class="c-d">${md(s)}</div><div class="c-d">${md(e)}</div><div class="c-n">${bd}</div><div class="c-p">${r.progress}%</div></div>
+      <div class="lc" data-open="${r.id}"><div class="c-name" style="padding-left:${6+r.level*18}px">${r.parent?`<button type="button" class="tg" data-tg="${r.id}" aria-label="折りたたみ">${collapsed.has(r.id)?"▸":"▾"}</button>`:`<span class="dot st-${r.st}" title="${ST[r.st]}"></span>`}<span class="tn">${esc(r.name)}</span></div><div class="c-as">${r.parent||readOnly?esc(who):`<button type="button" class="asbox${who?"":" none"}" data-as="${r.id}" aria-label="担当者を選ぶ" title="${esc(who)}"><span>${esc(who)||"担当なし"}</span><b aria-hidden="true">${who?"▾":"＋"}</b></button>`}</div><div class="c-d">${md(s)}</div><div class="c-d">${md(e)}</div><div class="c-n">${bd}</div><div class="c-p">${r.progress}%</div><div class="c-id">${esc(r.id)}</div><div class="c-st">${ST[r.st]}</div><div class="c-done">${list?doneCell(all,r):""}</div></div>
       <div class="tl">${mark}</div></div>`;
   });
   if(!readOnly)rowsHtml+=`<div class="row addrow"><div class="lc" data-act="add"><div class="c-name" style="padding-left:12px">＋ タスクを追加</div></div><div class="tl"></div></div>`;
@@ -114,11 +121,13 @@ function render(){
     lk+=`<path class="${B.s<=A.e?"bad":""}" d="M${xv} ${y1}V${y2}H${x2-1}" marker-end="url(#lk-arrow)"/>`;}));
   const linksSvg=lk?`<svg class="links" width="${tw}" height="${H0+vis.length*RH+RH}"><defs><marker id="lk-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--ink2)" stroke="none"/></marker></defs>${lk}</svg>`:"";
   const sl=chart.scrollLeft,st=chart.scrollTop;
+  chart.classList.toggle("list",list); // 一覧: the same table without the timeline (tempo.css)
+  chart.classList.toggle("noid",!view.ids);
   chart.innerHTML=`<div class="grid" style="--tw:${tw}px;width:calc(var(--lw) + ${tw}px)">
     <div class="bgl" style="${bgStyle}">${bg}</div>
-    <div class="hdr"><div class="corner"><div class="c-name" style="flex:1;flex-direction:column;align-items:flex-start;gap:6px">${lockBar(p)}<small style="color:var(--ink2);font-size:10.5px">マイルストーン ▶</small>タスク</div><div class="c-as">担当</div><div class="c-d">開始</div><div class="c-d">終了</div><div class="c-n" title="営業日">日数</div><div class="c-p">進捗</div><i class="lwh" title="ドラッグで幅を変更"></i></div><div class="ht" id="ht"><div class="band"></div>${top}${bot}${hint}${flags}</div></div>
+    <div class="hdr"><div class="corner"><div class="c-name" style="flex:1;flex-direction:column;align-items:flex-start;gap:6px">${lockBar(p)}<small style="color:var(--ink2);font-size:10.5px">マイルストーン ▶</small>タスク</div><div class="c-as"><i class="lwh lwn" title="ドラッグでタスク列の幅を変更"></i>担当</div><div class="c-d">開始</div><div class="c-d">終了</div><div class="c-n" title="営業日">日数</div><div class="c-p">進捗</div><div class="c-id"><button type="button" class="tg" data-ids title="${view.ids?"ID の列を折りたたむ":"ID の列を表示"}" aria-label="ID の列の表示切り替え">${view.ids?"◂":"▸"}</button><span>ID</span></div><div class="c-st">状況</div><div class="c-done">完了</div><i class="lwh" title="ドラッグで幅を変更"></i></div><div class="ht" id="ht"><div class="band"></div>${top}${bot}${hint}${flags}</div></div>
     ${rowsHtml}${linksSvg}</div>`;
-  if(scrolledFor!==curId+sc){scrolledFor=curId+sc;scrollInitial()}else{chart.scrollLeft=sl;chart.scrollTop=st}
+  if(scrolledFor!==curId+sc+list){scrolledFor=curId+sc+list;scrollInitial()}else{chart.scrollLeft=sl;chart.scrollTop=st}
 }
 function scrollToToday(){if(!range)return;const c=$("chart");c.scrollLeft=Math.max(0,(TODAY-range.a)*range.dw-120)}
 function scrollInitial(){const p=projects[curId],o=p&&overall(p);if(!o||!o.rows.length||!range)return scrollToToday();

@@ -28,7 +28,7 @@ const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k
 
 let projects={}, curId=ls.get("mg.cur"), store=null, storeRO=false, readOnly=false; // store: the backend from storage.js, null while loading. readOnly: the open project can't be edited (storeRO, or shared and offline) — set by render
 let me=ls.get("mg.me")||""; // who I am, picked from the roster, kept in this browser
-let view={scale:ls.get("mg.scale")||"day",who:"",st:""};
+let view={scale:["week","month"].includes(ls.get("mg.scale"))?ls.get("mg.scale"):"day",list:ls.get("mg.view")==="list",ids:ls.get("mg.ids")==="1",who:"",st:"",q:""}; // ids: the ID column of 一覧 is open (folded by default) // list: 一覧 instead of the chart
 let visOrder=[];
 let collapsed=new Set(), editingId=null, dragging=false, scrolledFor=null, range=null;
 const pendingIds=new Set(), timers={};

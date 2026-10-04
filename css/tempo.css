@@ -5,7 +5,7 @@
   --st-done:#9AA5AC; --st-ok:#2E9460; --st-late:#E08A1E; --st-over:#D0443A; --st-todo:#5C82BE;
   --font:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
-  --rh:34px; --lw:540px;
+  --rh:34px; --lw:540px; --bar:#1B2730; --bar-ink:#E8EEF1;
   --ms-blue:#2F74D0; --ms-red:#D2443A; --ms-green:#3A9A4C; --ms-yellow:#D99A12; --ms-purple:#9057C4;
 }
 @media (prefers-color-scheme: dark){
@@ -48,7 +48,15 @@ select{padding-right:4px}
 .seg button{height:28px;border:0;background:var(--panel);padding:0 11px;border-right:1px solid var(--line)}
 .seg button:last-child{border-right:0}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg button:disabled,.btn:disabled{opacity:.4;cursor:default}
+.tools .btn{height:28px}
 .spacer{flex:1}
+/* top bar, after Brabio: dark strip with the brand and the open project; storage state, 保存 and 自分 on the right */
+.topbar{display:flex;align-items:center;gap:10px;margin:-12px -16px 0;padding:6px 16px;background:var(--bar);color:var(--bar-ink)}
+.topbar .brand .ver,.topbar .mode{color:#9FB0BA}
+.topbar #projSel{font-weight:500;max-width:40vw}
+.topbar select,.topbar .btn{height:26px;color:var(--ink)}
+#qIn{height:30px;width:200px;border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:0 8px;color:var(--ink);font:inherit;font-size:13px}
 .mode{font-size:11px;color:var(--ink2)}
 .stats{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:12px;color:var(--ink2)}
 .stats b{color:var(--ink);font-family:var(--mono);font-weight:500}
@@ -67,6 +75,10 @@ select{padding-right:4px}
 .corner>div{padding:0 6px 6px}
 .lwh{position:absolute;top:0;bottom:0;right:-4px;width:7px;cursor:col-resize;touch-action:none;z-index:1}
 .lwh:hover{background:color-mix(in srgb,var(--accent) 45%,transparent)}
+/* a line between タスク and 担当: the same drag as the right edge, right where the タスク column ends */
+.lc .c-as,.corner .c-as{border-left:1px solid var(--line)}
+.corner .c-as{position:relative;align-self:stretch;display:flex;align-items:flex-end}
+.lwn{right:auto;left:-4px}
 .lk{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:11px;color:var(--ink)}.lk .btn{height:22px;padding:0 8px;font-size:11px}
 .ht{position:relative;height:74px;cursor:pointer}
 .ht .band{position:absolute;left:0;right:0;top:50px;height:24px;border-top:1px dashed var(--line2)}
@@ -96,7 +108,8 @@ select{padding-right:4px}
 .pop h3{margin:0;font-size:13px;display:flex;align-items:center;gap:6px}
 .pop .colors{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12px;color:var(--ink2)}
 .pop .colors label{display:flex;align-items:center;gap:3px;cursor:pointer}
-.pop input[type=text]{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:6px 8px;font-size:13px;color:var(--ink)}
+.pop input[type=text],.pop textarea{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:6px 8px;font-size:13px;color:var(--ink)}
+.pop textarea{font:inherit;font-size:13px;resize:vertical}
 .pop .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .pop .acts .danger{margin-right:auto}
 .nextms{display:inline-flex;align-items:center;gap:4px}
@@ -152,6 +165,29 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .c-d{width:50px;font-family:var(--mono);font-size:12px;text-align:right}
 .c-n{width:42px;font-family:var(--mono);font-size:12px;text-align:right;color:var(--ink2)}
 .c-p{width:52px;font-family:var(--mono);font-size:12px;text-align:right}
+/* 一覧 view (chart.list): the same rows without the timeline, in the columns of the 一覧 Excel export: ID first, then 状況 and 完了 at the end */
+.c-id,.c-st,.c-done{display:none}
+.chart.list .grid{width:100%!important}
+.chart.list .hdr,.chart.list .row{grid-template-columns:1fr}
+.chart.list .tl,.chart.list .ht,.chart.list .bgl,.chart.list .links,.chart.list .lwh,.chart.list .corner small{display:none}
+.chart.list .corner>div{padding-top:8px}
+.chart.list .c-id{display:block;width:120px;font-family:var(--mono);font-size:12px;color:var(--ink2);-webkit-user-select:text;user-select:text;cursor:text}
+.chart.list .c-st{display:block;width:80px;font-size:12px}
+/* the ID column is folded by default: a narrow strip with only the ▸ button in the header */
+.chart.list .corner .c-id{display:flex;align-items:center;gap:4px;cursor:default}
+.chart.list.noid .c-id{width:30px;padding-left:6px!important;padding-right:0}
+.chart.list.noid .lc .c-id{font-size:0}.chart.list.noid .corner .c-id span{display:none}
+.chart.list .c-done{display:block;width:60px;font-size:12px;color:var(--ink2);text-align:center}
+.chart.list .c-as{width:180px}
+.chart.list .c-id{order:-2}.chart.list .c-name{order:-1} /* ID / タスク / 担当 / 開始 / 終了 / 日数 / 進捗 / 状況 / 完了 */
+.chart.list .lc>.c-id{padding-left:12px}.chart.list .corner>.c-id{padding-left:12px}
+/* column lines like a spreadsheet: every cell fills the row height; all but the first (ID) get a left border */
+.chart.list .lc>div,.chart.list .corner>div{align-self:stretch;line-height:var(--rh)}
+.chart.list .corner>div{padding-top:0;padding-bottom:0}
+.chart.list .lc>div:not(.c-id),.chart.list .corner>div:not(.c-id){border-left:1px solid var(--line)}
+.chart.list .addrow .lc>div{border-left:0}
+.chart.list .corner .c-as{align-items:center}
+.c-done input{width:16px;height:16px;cursor:pointer;vertical-align:middle}
 .corner .c-d,.corner .c-n,.corner .c-p{font-family:var(--font);font-size:11px}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
 .tg{border:0;background:none;width:16px;padding:0;color:var(--ink2);flex:none}
@@ -182,6 +218,10 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .drawer form{display:flex;flex-direction:column;gap:12px}
 .drawer header{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .drawer h2{margin:0;font-size:16px}
+.drawer h3{margin:6px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:12px;font-weight:700;color:var(--ink)}
+.drawer .path{font-family:var(--mono);font-size:11px;word-break:break-all;-webkit-user-select:all;user-select:all;cursor:text}
+.drawer details{font-size:12px;color:var(--ink2)}.drawer summary{cursor:pointer;padding:2px 0}
+.drawer details[open]{display:flex;flex-direction:column;gap:8px}.drawer details textarea{width:100%;box-sizing:border-box}
 .drawer label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink2)}
 .drawer input:not([type=checkbox]):not([type=range]),.drawer textarea{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:6px 8px;color:var(--ink);font-size:13px}
 .drawer label.chk{flex-direction:row;align-items:center;gap:6px;color:var(--ink)}

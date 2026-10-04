@@ -13,25 +13,31 @@
 
 
 <div class="app">
-  <div class="bar1">
-    <div class="brand"><i aria-hidden="true"></i>Tempo<small class="ver">v0.0.3</small></div>
+  <div class="topbar">
+    <div class="brand"><i aria-hidden="true"></i>Tempo<small class="ver">v0.0.4</small></div>
     <select id="projSel" aria-label="プロジェクト"></select>
-    <button class="btn" id="projNew" type="button">＋ プロジェクト</button>
-    <button class="btn" id="projSet" type="button">設定</button>
+    <span class="spacer"></span>
+    <span class="mode" id="modeLbl"></span>
     <button class="btn" id="saveBtn" type="button" title="バックアップフォルダに今の状態を保存（ファイル名は押した日時）">保存</button>
     <select id="meSel" aria-label="自分" title="自分の名前（メンバー名簿から選ぶ・このブラウザに保存）"></select>
+  </div>
+  <div class="bar1">
+    <div class="seg" role="group" aria-label="表示">
+      <button type="button" data-view="gantt">ガント</button><button type="button" data-view="list" title="一覧：タイムラインなしで、タスクと成果物を ID・担当・状況・完了で一覧表示">一覧</button>
+    </div>
+    <div class="stats" id="stats"></div>
     <span class="spacer"></span>
+    <input type="search" id="qIn" placeholder="このプロジェクトを検索" aria-label="タスク名で検索" autocomplete="off">
+    <button class="btn" id="projSet" type="button">設定</button>
+  </div>
+  <div class="bar2">
     <select id="whoSel" aria-label="担当者で絞り込み"></select>
+    <div class="stats" id="chips"></div>
+    <span class="spacer"></span>
     <div class="seg" role="group" aria-label="表示単位">
       <button type="button" data-scale="day">日</button><button type="button" data-scale="week">週</button><button type="button" data-scale="month">月</button>
     </div>
     <button class="btn" id="todayBtn" type="button">今日</button>
-    <button class="btn pri" id="addBtn" type="button">＋ タスク</button>
-  </div>
-  <div class="bar2">
-    <div class="stats" id="stats"></div>
-    <span class="spacer"></span>
-    <span class="mode" id="modeLbl"></span>
   </div>
   <div class="tools" id="tools" role="toolbar" aria-label="編集ツールバー">
     <button class="tb" type="button" data-cmd="undo" title="元に戻す（Ctrl+Z）" aria-label="元に戻す"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 4 3.5 7.5 7 11"/><path d="M3.5 7.5H12a4.5 4.5 0 0 1 0 9H8"/></svg></button>
@@ -42,6 +48,7 @@
     <span class="sep2"></span>
     <button class="tb" type="button" data-cmd="insAbove" title="上にタスクを挿入" aria-label="上に挿入"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="11" width="14" height="6" rx="1"/><path d="M10 2.5v6M7 5.5h6"/></svg></button>
     <button class="tb" type="button" data-cmd="insBelow" title="下にタスクを挿入" aria-label="下に挿入"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="14" height="6" rx="1"/><path d="M10 11.5v6M7 14.5h6"/></svg></button>
+    <button class="tb" type="button" data-cmd="bulk" title="子タスクを一括追加（1 行に 1 つ、まとめて貼り付け）" aria-label="子タスクを一括追加"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4h10M4 7v9.5M4 9.5h3M4 13h3M4 16.5h3M9 9.5h8M9 13h8M9 16.5h8"/></svg></button>
     <button class="tb" type="button" data-cmd="indent" title="子タスクにする（Tab）" aria-label="インデント"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4h14M9 8.5h8M9 12h8M3 16h14M3 8l3 2.2L3 12.4"/></svg></button>
     <button class="tb" type="button" data-cmd="outdent" title="階層を上げる（Shift+Tab）" aria-label="アウトデント"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4h14M9 8.5h8M9 12h8M3 16h14M6 8L3 10.2 6 12.4"/></svg></button>
     <button class="tb" type="button" data-cmd="up" title="上へ移動（Alt+↑）" aria-label="上へ移動"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M10 17V4M5.5 8.5 10 4l4.5 4.5M4 2.5h12"/></svg></button>
@@ -77,34 +84,44 @@
     <footer><button class="btn pri" type="submit">保存</button><button class="btn danger" type="button" id="taskDel">削除</button></footer>
   </form>
   <form id="projForm" hidden>
-    <header><h2>プロジェクト設定</h2><button class="btn" type="button" data-close>閉じる</button></header>
+    <header><h2>設定</h2><button class="btn" type="button" data-close>閉じる</button></header>
     <div class="pj">
-    <label>プロジェクト名<input id="p-name" required autocomplete="off"></label>
-    <footer><button class="btn pri" type="submit">保存</button></footer>
-    <hr class="sep">
-    <label>メンバー（「、」で区切って複数追加できます）<div class="addm"><input id="p-mem" autocomplete="off" placeholder="名前"><button class="btn" type="button" id="p-memAdd">追加</button></div></label>
+    <h3>このプロジェクト</h3>
+    <label>プロジェクト名<div class="addm"><input id="p-name" required autocomplete="off"><button class="btn pri" type="submit">保存</button></div></label>
+    <label>メンバー<div class="addm"><input id="p-mem" autocomplete="off" placeholder="名前" title="「、」で区切って複数追加できます"><button class="btn" type="button" id="p-memAdd">追加</button></div></label>
     <div class="mem" id="p-mems"></div>
-    <hr class="sep">
-    <label>データ（JSON）<textarea id="p-json" rows="7" spellcheck="false" style="font-family:var(--mono);font-size:11px"></textarea></label>
-    <div class="order"><button class="btn" type="button" id="p-copy">JSONをコピー</button><button class="btn" type="button" id="p-import">貼り付けたJSONで置き換え</button></div>
-    <div class="order">Excel（.xlsx）<button class="btn" type="button" id="p-xout">書き出す</button><button class="btn" type="button" id="p-xin">読み込んで置き換え</button><input type="file" id="p-xfile" accept=".xlsx" hidden></div>
-    <hr class="sep">
+    <div class="order" id="sh-proj"><span id="sh-where"></span><button class="btn" type="button" id="sh-move" title="共有フォルダへ移すと、このブラウザには残りません">共有フォルダへ移動</button><button class="btn" type="button" id="sh-copy" title="別の独立したプロジェクトとして、このブラウザにコピーします">ローカルにコピー</button></div>
+    <h3>書き出し・読み込み</h3>
+    <div class="order">Excel<button class="btn" type="button" id="p-xout" title="Brabio 形式（あとで読み込めます）">書き出す</button><button class="btn" type="button" id="p-xlist" title="閲覧用：階層で字下げした一覧（Tempo には読み込めません）">一覧を書き出す</button><button class="btn" type="button" id="p-xin" title="現在のプロジェクトの全タスクを置き換えます">読み込んで置き換え</button><input type="file" id="p-xfile" accept=".xlsx" hidden></div>
+    <details><summary>JSON</summary>
+      <textarea id="p-json" rows="7" spellcheck="false" aria-label="データ（JSON）" style="font-family:var(--mono);font-size:11px"></textarea>
+      <div class="order"><button class="btn" type="button" id="p-copy">JSONをコピー</button><button class="btn" type="button" id="p-import">貼り付けたJSONで置き換え</button></div>
+    </details>
     </div>
-    <div class="order">自動バックアップ（全プロジェクト）<button class="btn" type="button" id="bk-pick">保存先フォルダを選ぶ</button><button class="btn" type="button" id="bk-restore">バックアップから復元</button><input type="file" id="bk-file" accept=".json" hidden></div>
+    <h3>このパソコン（全プロジェクト共通）</h3>
+    <div class="order">バックアップ<button class="btn" type="button" id="bk-pick" title="選ぶと、変更のたびに auto.backup.json を上書き保存し、「保存」ボタンで日時のファイルを追加します">保存先フォルダを選ぶ</button><button class="btn" type="button" id="bk-restore">バックアップから復元</button><input type="file" id="bk-file" accept=".json" hidden></div>
     <div class="hint" id="bk-info"></div>
-    <hr class="sep">
-    <div class="order" id="sh-row">共有フォルダ（共有ドライブの data）<button class="btn" type="button" id="sh-pick">フォルダを選ぶ</button><button class="btn" type="button" id="sh-move">共有フォルダへ移動</button><button class="btn" type="button" id="sh-copy">ローカルにコピー</button></div>
+    <div class="order" id="sh-row">共有フォルダ<button class="btn" type="button" id="sh-pick" title="共有ドライブの「data」フォルダを選びます（名前が data のフォルダだけ選べます）">フォルダを選ぶ</button></div>
     <div class="hint" id="sh-info"></div>
-    <div class="pj">
-    <hr class="sep">
-    <footer><button class="btn danger" type="button" id="projDel">このプロジェクトを削除</button></footer>
-    </div>
+    <div class="hint path" id="sh-path" title="共有フォルダの場所（選択してコピーできます）" hidden></div>
+    <h3>プロジェクトの追加・削除</h3>
+    <div class="order"><button class="btn" id="projNew" type="button">＋ プロジェクト</button><span class="spacer"></span><button class="btn danger" type="button" id="projDel">このプロジェクトを削除</button></div>
   </form>
 </aside>
 
-<div class="pop ctx" id="ctxMenu" role="menu" hidden><button type="button" role="menuitem" id="ctxRename">名前を変更</button><div class="ctxc" id="ctxColor" hidden>色<input type="color" id="ctxPc" aria-label="親タスクの色"><button type="button" id="ctxPcOk">決定</button><button type="button" id="ctxPcNone">既定の色</button></div></div>
+<div class="pop ctx" id="ctxMenu" role="menu" hidden><button type="button" role="menuitem" id="ctxRename">名前を変更</button><button type="button" role="menuitem" id="ctxBulk">子タスクを一括追加</button><div class="ctxc" id="ctxColor" hidden>色<input type="color" id="ctxPc" aria-label="親タスクの色"><button type="button" id="ctxPcOk">決定</button><button type="button" id="ctxPcNone">既定の色</button></div></div>
 <div class="pop aspop" id="asPop" hidden><div class="mem" id="asMem" aria-label="担当者を選ぶ"></div></div>
 <div class="pop pgpop" id="pgPop" hidden><input type="range" id="pgR" min="0" max="100" step="5" aria-label="進捗"><button class="btn" type="button" id="pgBack">戻す</button></div>
+<form class="pop" id="dropPop" hidden>
+  <h3>バックアップを読み込みますか？</h3>
+  <div class="hint"><b id="dropFile"></b><br><span id="dropWhat"></span><br>同じ ID のプロジェクトは、このファイルの内容に置き換わります。ほかのプロジェクトはそのままです。</div>
+  <div class="acts"><button class="btn pri" type="submit">読み込む</button><button class="btn" type="button" id="dropCancel">キャンセル</button></div>
+</form>
+<form class="pop" id="bulkPop" hidden>
+  <h3 id="bulkTitle"></h3>
+  <textarea id="bulkIn" rows="8" spellcheck="false" placeholder="1 行に 1 つ、子タスクの名前を入力（まとめて貼り付けできます）" aria-label="子タスクの名前"></textarea>
+  <div class="acts"><button class="btn pri" type="submit">追加する</button><button class="btn" type="button" id="bulkCancel">キャンセル</button></div>
+</form>
 <form class="pop" id="msPop" hidden>
   <h3><span id="msFlagIco"></span><span id="msTitle"></span></h3>
   <div class="colors" role="radiogroup" aria-label="色の選択">色の選択

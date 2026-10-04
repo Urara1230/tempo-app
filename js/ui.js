@@ -1,6 +1,6 @@
 // Interactions: drawer forms, members, milestones, popups, context menu, drag & drop, selection, toolbar, keyboard.
 /* ---------- actions ---------- */
-function setCur(id){if(sh.mine&&sh.mine!==id)shUnlock();lkArmed=false;curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
+function setCur(id){if(sh.mine&&sh.mine!==id)shUnlock();lkArmed=false;view.q=$("qIn").value="";curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
 function newProject(){
   if(storeRO)return;
   const id=uid();projects[id]={id,name:"新しいプロジェクト",tasks:[]};setCur(id);save(projects[id]);openProject();
@@ -33,7 +33,7 @@ function bizHint(){const s=$("f-s").value,e=$("f-e").value;if(!s||!e)return"";if
 function openProject(){
   const p=projects[curId];armReset();
   drawer.hidden=false;$("taskForm").hidden=true;$("projForm").hidden=false;
-  document.querySelectorAll("#projForm .pj").forEach(e=>e.hidden=!p); // without a project, only the folders (backup, shared) are offered
+  document.querySelectorAll("#projForm .pj").forEach(e=>e.hidden=!p);$("projDel").hidden=!p; // without a project: only this PC's folders and ＋ プロジェクト
   bkInfo();shInfo();if(!p)return;$("p-name").value=p.name||"";$("p-json").value=JSON.stringify({name:p.name,members:roster(p),tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[]},null,1);rosterChips();
 }
 $("f-s").addEventListener("input",()=>{if($("f-e").value<$("f-s").value)$("f-e").value=$("f-s").value;$("f-biz").textContent=bizHint()});
@@ -108,19 +108,28 @@ async function fromXlsx(buf){
   });
   return d;
 }
-$("p-xout").addEventListener("click",()=>{const p=projects[curId];if(!p)return;const{mn,mx}=overall(p);
-  const a=document.createElement("a");a.href=URL.createObjectURL(toXlsx(p));
-  a.download=((p.name||"Tempo")+(isFinite(mn)?` (${S(mn)}～${S(mx)})`:"")).replace(/[\\/:*?"<>|]/g,"_")+".xlsx";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)});
+/* 一覧: a sheet for reading only (not importable): titles indented by level, fewer columns */
+function toListXlsx(p){const now=new Date(),z=n=>String(n).padStart(2,"0"),day=s=>s?{date:s}:"";
+  return xlsxBlob([[p.name||""],[`${now.getFullYear()}年${z(now.getMonth()+1)}月${z(now.getDate())}日 ${z(now.getHours())}時${z(now.getMinutes())}分　※閲覧用（Tempo には読み込めません）`],
+    ["ID","タイトル","担当","開始日","〆切日","営業日","進捗率","状況"],
+    ...derive(p).map(r=>[r.id,"　".repeat(r.level)+r.name,r.assignees.join("、"),day(r.start),day(r.end),biz(D(r.start),D(r.end)),r.progress,ST[r.st]])],
+    {widths:[13,52,16,11,11,7,7,9],head:2});
+}
+function xdl(blob,p,tag){const{mn,mx}=overall(p),a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download=((p.name||"Tempo")+tag+(isFinite(mn)?` (${S(mn)}～${S(mx)})`:"")).replace(/[\\/:*?"<>|]/g,"_")+".xlsx";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+$("p-xout").addEventListener("click",()=>{const p=projects[curId];if(p)xdl(toXlsx(p),p,"")});
+$("p-xlist").addEventListener("click",()=>{const p=projects[curId];if(p)xdl(toListXlsx(p),p," 一覧")});
 $("p-xin").addEventListener("click",()=>$("p-xfile").click());
 $("p-xfile").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
   try{replaceData(await fromXlsx(await f.arrayBuffer()))}catch(err){toast("Excelを読み取れませんでした。「タイプ」「タイトル」の列がある .xlsx（Brabio 形式）か確認してください")}});
 /* backup folder (storage.js): pick it, 保存 button, what was saved last, restore from any saved file */
 function bkInfo(){
   $("saveBtn").hidden=!window.showDirectoryPicker;
-  $("bk-info").textContent=!window.showDirectoryPicker?"このブラウザでは使えません（Chrome / Edge で開いてください）"
-    :!bk.dir?"未設定：フォルダを選ぶと、変更のたびに auto.backup.json を上書き保存し、「保存」ボタンで日時のファイルを追加します"
-    :!bk.ok?`保存先「${bk.dir.name}」：次の編集時にフォルダへのアクセス許可を確認します`
-    :`保存先「${bk.dir.name}」　自動：auto.backup.json${bk.last?`（${bk.last}）`:""}　手動：${bk.saved||"まだ保存していません"}`}
+  // short status only: the explanations are in the buttons' tooltips (the user found the panel too wordy)
+  $("bk-info").textContent=!window.showDirectoryPicker?"Chrome / Edge で使えます"
+    :!bk.dir?"未設定"
+    :!bk.ok?`「${bk.dir.name}」　次の編集時に許可を確認`
+    :`「${bk.dir.name}」　自動 ${bk.last||"—"}　手動 ${bk.saved||"—"}`}
 async function pickDir(){const d=await showDirectoryPicker({id:"tempo-backup",mode:"readwrite"});if(sh.dir&&await sh.dir.isSameEntry(d))throw Object.assign(new Error("same"),{code:"same"});bk.dir=d;bk.ok=true;bk.asked=true;await kv("readwrite",s=>s.put(bk.dir,"bkDir"))}
 $("bk-pick").addEventListener("click",async()=>{
   try{await pickDir();backupSoon();bkInfo();toast("バックアップ先を設定しました")}
@@ -133,20 +142,36 @@ $("saveBtn").addEventListener("click",async()=>{const n=bkStamp()+".backup.json"
     await bkWrite(n);bk.saved=n;bkInfo();toast(`保存しました：${n}`);
   }catch(e){if(e.name!=="AbortError")toast("保存できませんでした。保存先フォルダを確認してください")}});
 $("bk-restore").addEventListener("click",()=>$("bk-file").click());
-$("bk-file").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f||storeRO)return;
-  let all;try{all=JSON.parse(await f.text());if(!all||!Object.values(all).length||!Object.values(all).every(p=>p&&Array.isArray(p.tasks)))throw 0}
-  catch(err){toast("バックアップファイルを読み取れませんでした");return}
+// a backup file's projects, or null (with a message) when the file is not a backup
+async function readBackup(f){
+  try{const all=JSON.parse(await f.text());if(!all||!Object.values(all).length||!Object.values(all).every(p=>p&&Array.isArray(p.tasks)))throw 0;return all}
+  catch(err){toast("バックアップファイル（.backup.json）を読み取れませんでした");return null}}
+async function restoreBackup(all){
   // keep the state before the restore in one file, overwritten each time: auto.backup.json is about to hold the restored data
   const pre="before-restore.backup.json";let kept=false;if(bk.ok)try{await bkWrite(pre);kept=true}catch(err){}
   Object.entries(all).forEach(([id,p])=>{projects[id]={id,name:String(p.name||"無題"),tasks:p.tasks,milestones:Array.isArray(p.milestones)?p.milestones:[],holidays:Array.isArray(p.holidays)?p.holidays:[],...(Array.isArray(p.members)?{members:p.members}:{}),...(projects[id]?.shared?{shared:true,rev:projects[id].rev}:{})};save(projects[id])});
   closeDrawer();toast(`${Object.keys(all).length} 件のプロジェクトを復元しました`+(kept?`（復元前の状態は ${pre} に保存）`:""));
-});
+}
+$("bk-file").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f||storeRO)return;const all=await readBackup(f);if(all)restoreBackup(all)});
+/* drop a backup file anywhere on the page = バックアップから復元, after a confirmation that says what it will replace (a drop is easy to do by mistake) */
+const dropPop=$("dropPop");let dropAll=null;
+const closeDrop=()=>{dropPop.hidden=true;dropAll=null};
+document.addEventListener("dragover",e=>{if([...e.dataTransfer.types].includes("Files"))e.preventDefault()}); // without this the browser opens the file instead
+document.addEventListener("drop",async e=>{const f=e.dataTransfer.files[0];if(!f)return;e.preventDefault();
+  if(storeRO){toast("閲覧のみのため読み込めません");return}
+  const all=await readBackup(f);if(!all)return;const ns=Object.values(all).map(p=>String(p.name||"無題"));
+  dropAll=all;$("dropFile").textContent=f.name;$("dropWhat").textContent=`${ns.length} 件のプロジェクト：${ns.join("、")}`;
+  dropPop.hidden=false;dropPop.style.left=Math.max(16,(innerWidth-dropPop.offsetWidth)/2)+"px";dropPop.style.top=Math.max(16,(innerHeight-dropPop.offsetHeight)/3)+"px"});
+dropPop.addEventListener("submit",e=>{e.preventDefault();const all=dropAll;closeDrop();if(all)restoreBackup(all)});
+$("dropCancel").addEventListener("click",closeDrop);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!dropPop.hidden)closeDrop()});
 /* shared folder (storage.js): pick it, move the open project there, copy a shared one back as a separate local project */
 function shInfo(){const p=projects[curId],on=store===backends.local&&!!window.showDirectoryPicker;
-  $("sh-row").hidden=$("sh-info").hidden=!on;$("sh-move").hidden=!p||!!p.shared||!sh.dir;$("sh-copy").hidden=!p?.shared;
+  $("sh-row").hidden=$("sh-info").hidden=!on;$("sh-proj").hidden=!on||!p;$("sh-move").hidden=!p||!!p.shared||!sh.dir;$("sh-copy").hidden=!p?.shared;
+  $("sh-where").textContent=p?.shared?"保存場所：共有フォルダ":"保存場所：このブラウザ";
   $("sh-info").textContent=location.host?"共有ドライブ上の Tempo.html を直接開いています。共有フォルダを使うには Tempo.bat から開いてください" // page opened from a network path: Chrome won't let it use folders
-    :!sh.dir?"未設定：共有ドライブの「data」フォルダを選ぶと、プロジェクトを共有できます（名前が data のフォルダだけ選べます）"
-    :`共有フォルダ「${sh.dir.name}」　共有プロジェクト ${Object.keys(sh.data).length} 件（一覧で 👥）${p?`　このプロジェクト：${p.shared?"共有":"ローカル（このブラウザだけ。「共有フォルダへ移動」を押すまで共有フォルダには保存されません）"}`:""}`}
+    :!sh.dir?"未設定":`「${sh.dir.name}」　共有プロジェクト ${Object.keys(sh.data).length} 件`;
+  $("sh-path").hidden=!on||!sh.dir||!sh.path;$("sh-path").textContent=sh.path}
 $("sh-pick").addEventListener("click",async()=>{try{await shPick();shInfo();render();const n=Object.keys(sh.data).length;
     toast(n?`共有フォルダを設定しました。共有プロジェクト ${n} 件は上のプロジェクト一覧（👥）から開けます`:"共有フォルダを設定しました（共有プロジェクトはまだありません）")}
   catch(e){if(e.name!=="AbortError")toast(e.code==="name"?`「data」という名前のフォルダを選んでください（選んだフォルダ：${e.picked}）`:e.code==="same"?"バックアップ先と同じフォルダは選べません":"フォルダを選べませんでした")}});
@@ -168,10 +193,11 @@ $("projNew").addEventListener("click",newProject);
 $("projSet").addEventListener("click",openProject);
 $("meSel").addEventListener("change",e=>{me=e.target.value;ls.set("mg.me",me);render()});
 $("whoSel").addEventListener("change",e=>{view.who=e.target.value;render()});
-$("addBtn").addEventListener("click",()=>cmd("add"));
+document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>{view.list=b.dataset.view==="list";ls.set("mg.view",view.list?"list":"gantt");render()}));
 $("todayBtn").addEventListener("click",scrollToToday);
 document.querySelectorAll("[data-scale]").forEach(b=>b.addEventListener("click",()=>{view.scale=b.dataset.scale;ls.set("mg.scale",view.scale);render()}));
-$("stats").addEventListener("click",e=>{const c=e.target.closest("[data-st]");if(!c)return;view.st=view.st===c.dataset.st?"":c.dataset.st;render()});
+$("qIn").addEventListener("input",e=>{view.q=e.target.value.trim().toLowerCase();render()}); // search this project by task name
+$("chips").addEventListener("click",e=>{const c=e.target.closest("[data-st]");if(!c)return;view.st=view.st===c.dataset.st?"":c.dataset.st;render()});
 
 const FLAG='<svg width="12" height="13" viewBox="0 0 12 13" aria-hidden="true"><path d="M1.5 1v11.5" stroke="var(--ink2)" stroke-width="1.3"/><path d="M2 1.2h8.3l-1.9 2.9 1.9 2.9H2z" fill="var(--mc)"/></svg>';
 const MSC=["blue","red","green","yellow","purple"];
@@ -214,6 +240,9 @@ document.addEventListener("pointerdown",e=>{if(!pop.hidden&&!pop.contains(e.targ
 const chart=$("chart");
 chart.addEventListener("click",e=>{
   if(e.target.closest("[data-pg]"))return;
+  if(e.target.closest("[data-ids]")){view.ids=!view.ids;ls.set("mg.ids",view.ids?"1":"");render();return} // 一覧: fold / unfold the ID column
+  const dn=e.target.closest("[data-done]");if(dn){const p=projects[curId],t=p.tasks.find(x=>x.id===dn.dataset.done); // 一覧: 完了 checkbox
+    if(t&&!readOnly){t.progress=dn.checked?100:0;save(p)}return}
   const lk=e.target.closest("[data-lk]");if(lk){const id=curId; // edit lock: 編集を終了 / ロックを解除 (twice)
     if(lk.dataset.lk==="end")shUnlock().then(()=>{render();toast("編集を終了しました")});
     else if(!lkArmed){lkArmed=true;render()}
@@ -271,6 +300,21 @@ chart.addEventListener("contextmenu",e=>{const o=e.target.closest("[data-open]")
 let ctxPreview=false; // the row shows a picked color that 決定 has not saved yet
 function closeCtx(){if(ctx.hidden)return;ctx.hidden=true;if(ctxPreview){ctxPreview=false;render()}} // closing without 決定 drops the preview
 $("ctxRename").addEventListener("click",()=>{closeCtx();rename(ctxId)});
+$("ctxBulk").addEventListener("click",()=>{closeCtx();openBulk(ctxId)});
+/* add several child tasks at once: one name per line, put under the task after its children; dates and assignees come from that task.
+   Closes only with キャンセル / Esc, so a click elsewhere doesn't lose pasted lines */
+const bulkPop=$("bulkPop");let bulkId=null;
+function openBulk(id){const p=projects[curId],r=p&&derive(p).find(x=>x.id===id);if(!r||readOnly)return;
+  if(r.level>=3){toast("これ以上深い階層にはできません");return}
+  bulkId=id;$("bulkTitle").textContent=`「${r.name}」の子タスクを一括追加`;$("bulkIn").value="";bulkPop.hidden=false;
+  bulkPop.style.left=Math.max(16,(innerWidth-bulkPop.offsetWidth)/2)+"px";bulkPop.style.top=Math.max(16,(innerHeight-bulkPop.offsetHeight)/3)+"px";$("bulkIn").focus()}
+function closeBulk(){bulkPop.hidden=true;bulkId=null}
+bulkPop.addEventListener("submit",e=>{e.preventDefault();const p=projects[curId],ts=p&&p.tasks,i=ts?ts.findIndex(t=>t.id===bulkId):-1;if(i<0||readOnly)return closeBulk();
+  const r=derive(p)[i],add=$("bulkIn").value.split("\n").map(s=>s.trim()).filter(Boolean);if(!add.length)return;
+  ts.splice(blockEnd(ts,i)+1,0,...add.map(name=>({id:uid(),name,start:r.start,end:r.end,progress:0,assignees:[...r.assignees],level:r.level+1})));
+  collapsed.delete(bulkId);closeBulk();save(p);toast(`${add.length} 件の子タスクを追加しました`)});
+$("bulkCancel").addEventListener("click",closeBulk);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!bulkPop.hidden)closeBulk()});
 function setParentColor(c){const p=projects[curId],t=p&&p.tasks.find(x=>x.id===ctxId);ctxPreview=false;ctx.hidden=true;if(!t)return;
   if(c)t.color=c;else delete t.color;save(p)}
 // the browser's color picker has no OK button: picking only previews on the row, 決定 saves
@@ -317,7 +361,7 @@ chart.addEventListener("click",e=>{if(noClick)e.stopImmediatePropagation()},true
 /* task table width: drag the corner's right edge; kept in this browser */
 let lwd=null;const setLw=w=>document.documentElement.style.setProperty("--lw",w+"px");
 if(+ls.get("mg.lw"))setLw(+ls.get("mg.lw"));
-chart.addEventListener("pointerdown",e=>{if(e.button||!e.target.classList.contains("lwh"))return;lwd={x:e.clientX,w0:e.target.parentNode.offsetWidth};e.preventDefault()});
+chart.addEventListener("pointerdown",e=>{if(e.button||!e.target.classList.contains("lwh"))return;lwd={x:e.clientX,w0:e.target.closest(".corner").offsetWidth};e.preventDefault()});
 document.addEventListener("pointermove",e=>{if(lwd)setLw(lwd.w=Math.round(Math.max(160,Math.min(innerWidth-120,lwd.w0+e.clientX-lwd.x))))});
 document.addEventListener("pointerup",()=>{if(lwd&&lwd.w)ls.set("mg.lw",lwd.w);lwd=null});
 
@@ -380,8 +424,8 @@ function newTask(level){let s=TODAY;while(isOff(s))s++;let e=s,c=1;while(c<5){e+
 function renderTools(){
   const p=projects[curId],n=p?selIdx(p).length:0,ro=readOnly||!p;
   document.querySelectorAll("#tools [data-cmd]").forEach(b=>{const c=b.dataset.cmd;
-    const need={copy:1,insAbove:1,insBelow:1,indent:1,outdent:1,up:1,down:1,link:2,unlink:1,asAdd:1,asDel:1,edit:1,del:1}[c]||0;
-    const h=p&&H(p.id);b.disabled=ro&&c!=="copy"||n<need||(c==="paste"&&!clip)||(c==="edit"&&n!==1)||(c==="undo"&&!(h&&h.u.length))||(c==="redo"&&!(h&&h.r.length));});
+    const need={copy:1,insAbove:1,insBelow:1,bulk:1,indent:1,outdent:1,up:1,down:1,link:2,unlink:1,asAdd:1,asDel:1,edit:1,del:1}[c]||0;
+    const h=p&&H(p.id);b.disabled=ro&&c!=="copy"||n<need||(c==="paste"&&!clip)||((c==="edit"||c==="bulk")&&n!==1)||(c==="undo"&&!(h&&h.u.length))||(c==="redo"&&!(h&&h.r.length));});
   const db2=document.querySelector('#tools [data-cmd=del]');db2.classList.toggle("arm",delArmed);db2.title=delArmed?"もう一度押すと削除":"削除（Delete を 2 回）";
   $("selInfo").textContent=n?`${n} 件選択中${delArmed?"　もう一度押すと削除します":""}`:"行をクリックで選択（Ctrl / Shift で複数）";
 }
@@ -409,6 +453,7 @@ function cmd(c){
     case"unlink":{ts.forEach(t=>{if(sel.has(t.id))t.deps=[];else if(t.deps)t.deps=t.deps.filter(d=>!sel.has(d))});save(p);toast("リンクを解除しました");return}
     case"undo":case"redo":{undo(c==="redo");return}
     case"edit":{if(idx.length===1)openTask(ts[first].id);return}
+    case"bulk":{if(idx.length===1)openBulk(ts[first].id);return}
     case"asAdd":case"asDel":{openAs(c);return}
     case"del":{if(!idx.length)return;if(!delArmed){delArmed=true;renderTools();return}
       const kill=new Set();topBlocks(p).forEach(i=>{for(let k=i;k<=blockEnd(ts,i);k++)kill.add(ts[k].id)});
@@ -431,7 +476,7 @@ $("asForm").addEventListener("submit",e=>{e.preventDefault();const p=projects[cu
   else{const n=$("asSel").value;selIdx(p).forEach(i=>{const t=p.tasks[i];t.assignees=(t.assignees||[]).filter(a=>a!==n)})}
   $("asForm").hidden=true;save(p);toast("担当者を更新しました")});
 document.addEventListener("keydown",e=>{
-  if(e.target.closest("input,textarea,select")||!drawer.hidden||!pop.hidden||!sel.size)return;
+  if(e.target.closest("input,textarea,select")||!drawer.hidden||!pop.hidden||!bulkPop.hidden||!sel.size)return;
   const k=e.key,mod=e.ctrlKey||e.metaKey;
   if(mod&&k.toLowerCase()==="c"){cmd("copy");e.preventDefault()}
   else if(mod&&k.toLowerCase()==="v"){cmd("paste");e.preventDefault()}

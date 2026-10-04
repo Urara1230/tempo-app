@@ -53,7 +53,7 @@ async function backupInit(){try{bk.dir=await kv("readonly",s=>s.get("bkDir"))||n
 // Edit lock: locks/<id>.json = {by, sid, at}. Taken on the first save, kept by a heartbeat every 30 s while I click or type,
 // let go when I switch project, press 編集を終了, close the page, or do nothing for 2 min. Others see the project read-only meanwhile.
 const sh={dir:null,ok:false,asked:false,err:false,at:0,files:{},data:{},emit:null,q:Promise.resolve(), // ok = permission, err = folder unreachable
-  locks:{},sig:"",mine:null,beat:0,act:Date.now(),newVer:""}; // newVer = a newer version published to app/ // mine = the project whose lock this page holds, act = last click / key
+  locks:{},sig:"",mine:null,beat:0,act:Date.now(),newVer:"",path:""}; // newVer = a newer version published to app/ // mine = the project whose lock this page holds, act = last click / key
 const SID=uid(),LOCK_MS=120e3; // this page's lock id; a lock not refreshed for 2 min counts as left
 // version check: publish.py writes data/app-version.json when it updates app/. A page still running older code
 // must not write shared data (the format may have changed): shared projects go read-only until it is reloaded.
@@ -77,7 +77,8 @@ async function shRead(){ // true when a project file or a lock changed since the
   Object.keys(sh.data).forEach(id=>{if(!seen.has(id)){delete sh.data[id];delete sh.files[id];ch=true}});
   const locks={};for await(const[n,h]of(await shDir("locks")).entries())if(h.kind==="file"&&n.endsWith(".json"))try{locks[n.slice(0,-5)]=JSON.parse(await(await h.getFile()).text())}catch(e){}
   sh.locks=locks;if(sh.mine&&lockOther(sh.mine))sh.mine=null; // taken over after a forced release
-  const v=(await shJson(sh.dir,"app-version.json"))?.version,nv=vnum(v)>vnum(VER)?String(v):""; // only newer: a developer's own newer copy is not held back
+  const av=await shJson(sh.dir,"app-version.json"),v=av?.version,nv=vnum(v)>vnum(VER)?String(v):""; // only newer: a developer's own newer copy is not held back
+  sh.path=typeof av?.path==="string"?av.path:""; // where the folder is, as publish.py saw it: the browser itself only gives the folder's name
   if(nv!==sh.newVer){sh.newVer=nv;ch=true;if(nv&&sh.mine)await shUnlockNow()}
   const sig=JSON.stringify([sh.mine,Object.entries(locks).filter(([,l])=>lockLive(l)).map(([id,l])=>[id,l.by,l.sid])]); // heartbeats alone don't redraw
   if(sig!==sh.sig){sh.sig=sig;ch=true}
@@ -119,7 +120,7 @@ async function shPick(){const d=await showDirectoryPicker({id:"tempo-shared",mod
   if(d.name.toLowerCase()!=="data")throw Object.assign(new Error("name"),{code:"name",picked:d.name}); // everyone picks the same <shared drive>/Tempo/data — a wrong folder would split the team silently
   if(bk.dir&&await bk.dir.isSameEntry(d))throw Object.assign(new Error("same"),{code:"same"}); // the backup folder is a copy of my data, not the shared one
   if(sh.mine)await shUnlock();
-  sh.dir=d;sh.ok=true;sh.err=false;sh.files={};sh.data={};sh.locks={};await kv("readwrite",s=>s.put(d,"shDir"));await shPoll()}
+  sh.dir=d;sh.ok=true;sh.err=false;sh.files={};sh.data={};sh.locks={};sh.path="";await kv("readwrite",s=>s.put(d,"shDir"));await shPoll()}
 async function shInit(){try{sh.dir=await kv("readonly",s=>s.get("shDir"))||null;if(sh.dir)sh.ok=await sh.dir.queryPermission({mode:"readwrite"})==="granted"}catch(e){}shPoll();render()}
 // every click or key counts as activity for the lock; after a browser restart the first click also asks Chrome to allow the folder again
 addEventListener("keydown",()=>sh.act=Date.now(),true);
