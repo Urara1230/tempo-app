@@ -14,7 +14,7 @@
 
 <div class="app">
   <div class="topbar">
-    <div class="brand"><i aria-hidden="true"></i>Tempo<small class="ver">v0.0.4</small></div>
+    <div class="brand"><i aria-hidden="true"></i>Tempo<small class="ver">v0.0.5</small></div>
     <select id="projSel" aria-label="プロジェクト"></select>
     <span class="spacer"></span>
     <span class="mode" id="modeLbl"></span>
@@ -25,6 +25,7 @@
     <div class="seg" role="group" aria-label="表示">
       <button type="button" data-view="gantt">ガント</button><button type="button" data-view="list" title="一覧：タイムラインなしで、タスクと成果物を ID・担当・状況・完了で一覧表示">一覧</button>
     </div>
+    <div class="seg"><button type="button" id="leafBtn" title="一覧で、いちばん上の親タスク（フォルダ）と子タスクのないタスク（成果物）だけを表示。間の親タスクは成果物の名前にマウスを置くと分かります">成果物のみ</button></div>
     <div class="stats" id="stats"></div>
     <span class="spacer"></span>
     <input type="search" id="qIn" placeholder="このプロジェクトを検索" aria-label="タスク名で検索" autocomplete="off">
@@ -73,13 +74,15 @@
 <aside class="drawer" id="drawer" hidden>
   <form id="taskForm" hidden>
     <header><h2>タスク編集</h2><button class="btn" type="button" data-close>閉じる</button></header>
+    <label id="f-par" title="このタスクの親タスク。変えて「保存」を押すと、その親タスクの下へ移動します">親<select id="f-pa"></select></label>
     <label>タスク名<input id="f-name" required autocomplete="off"></label>
     <label>担当者（「、」か「,」で区切る）<input id="f-as" list="members" autocomplete="off"></label>
     <div class="mem" id="f-mem" aria-label="メンバーから選ぶ"></div>
-    <div class="two"><label>開始日<input type="date" id="f-s"></label><label>終了日<input type="date" id="f-e"></label></div>
+    <div class="two"><label>開始日<input type="date" id="f-s" max="9999-12-31"></label><label>終了日<input type="date" id="f-e" max="9999-12-31"></label></div>
     <div class="hint" id="f-biz"></div>
     <label>進捗 <output id="f-po">0%</output><input type="range" id="f-p" min="0" max="100" step="5"></label>
     <label class="chk"><input type="checkbox" id="f-ms">マイルストーン（◆で表示）</label>
+    <label class="chk" title="成果物のタグ：一覧の「成果物のみ」に表示され、名前の前の印が四角になります"><input type="checkbox" id="f-dv">成果物</label>
     <label>メモ<textarea id="f-memo" rows="3"></textarea></label>
     <footer><button class="btn pri" type="submit">保存</button><button class="btn danger" type="button" id="taskDel">削除</button></footer>
   </form>
@@ -109,7 +112,7 @@
   </form>
 </aside>
 
-<div class="pop ctx" id="ctxMenu" role="menu" hidden><button type="button" role="menuitem" id="ctxRename">名前を変更</button><button type="button" role="menuitem" id="ctxBulk">子タスクを一括追加</button><div class="ctxc" id="ctxColor" hidden>色<input type="color" id="ctxPc" aria-label="親タスクの色"><button type="button" id="ctxPcOk">決定</button><button type="button" id="ctxPcNone">既定の色</button></div></div>
+<div class="pop ctx" id="ctxMenu" role="menu" hidden><button type="button" role="menuitem" id="ctxRename">名前を変更</button><hr role="separator"><button type="button" role="menuitem" data-ctx="copy">コピー<kbd>Ctrl+C</kbd></button><button type="button" role="menuitem" data-ctx="paste">貼り付け<kbd>Ctrl+V</kbd></button><hr role="separator"><button type="button" role="menuitem" data-ctx="insAbove">上にタスクを挿入</button><button type="button" role="menuitem" data-ctx="insBelow">下にタスクを挿入</button><button type="button" role="menuitem" id="ctxBulk">子タスクを一括追加</button><hr role="separator"><button type="button" role="menuitem" id="ctxDv" title="選択中の、子タスクのないタスクに成果物のタグを付けます／外します">成果物にする</button><hr role="separator"><button type="button" role="menuitem" data-ctx="indent">子タスクにする<kbd>Tab</kbd></button><button type="button" role="menuitem" data-ctx="outdent">階層を上げる<kbd>Shift+Tab</kbd></button><button type="button" role="menuitem" data-ctx="up">上へ移動<kbd>Alt+↑</kbd></button><button type="button" role="menuitem" data-ctx="down">下へ移動<kbd>Alt+↓</kbd></button><div class="ctxc" id="ctxColor" hidden>色<input type="color" id="ctxPc" aria-label="親タスクの色"><button type="button" id="ctxPcOk">決定</button><button type="button" id="ctxPcNone">既定の色</button></div></div>
 <div class="pop aspop" id="asPop" hidden><div class="mem" id="asMem" aria-label="担当者を選ぶ"></div></div>
 <div class="pop pgpop" id="pgPop" hidden><input type="range" id="pgR" min="0" max="100" step="5" aria-label="進捗"><button class="btn" type="button" id="pgBack">戻す</button></div>
 <form class="pop" id="dropPop" hidden>
@@ -120,6 +123,7 @@
 <form class="pop" id="bulkPop" hidden>
   <h3 id="bulkTitle"></h3>
   <textarea id="bulkIn" rows="8" spellcheck="false" placeholder="1 行に 1 つ、子タスクの名前を入力（まとめて貼り付けできます）" aria-label="子タスクの名前"></textarea>
+  <label class="chk"><input type="checkbox" id="bulkDv" checked>成果物として追加</label>
   <div class="acts"><button class="btn pri" type="submit">追加する</button><button class="btn" type="button" id="bulkCancel">キャンセル</button></div>
 </form>
 <form class="pop" id="msPop" hidden>

@@ -8,9 +8,11 @@ const backends={
   local:{
     label:"このブラウザに保存",
     read(){try{return JSON.parse(ls.get("mg.projects"))}catch(e){return null}},
-    write(all){ls.set("mg.projects",JSON.stringify(all))},
+    write(all){localStorage.setItem("mg.projects",JSON.stringify(all))}, // not ls.set: a full or blocked storage must reach the "could not save" message
     // projects in the shared folder (see sh below) come along with this browser's own; put / remove go to where the project lives
-    async open(onData){sh.emit=()=>onData({...(this.read()||{}),...shProjects()});sh.emit();return{readOnly:false}}, // first run starts empty: no sample data ships with the repo
+    async open(onData){sh.emit=()=>onData({...(this.read()||{}),...shProjects()});sh.emit();
+      addEventListener("storage",e=>{if(e.key==="mg.projects")sh.emit()}); // another tab of this browser saved: show it here too
+      return{readOnly:false}}, // first run starts empty: no sample data ships with the repo
     async put(id,data){if(isShared(id))return shRun(()=>shPut(id,data));const all=this.read()||{};all[id]={id,...data};this.write(all)},
     async remove(id){if(isShared(id))return shRun(()=>shRemove(id));const all=this.read()||{};delete all[id];this.write(all)},
   },
@@ -36,8 +38,7 @@ const bk={dir:null,ok:false,asked:false,timer:null,last:null,saved:null}; // las
 function kv(mode,fn){return new Promise((ok,ng)=>{const r=indexedDB.open("tempo",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onerror=()=>ng(r.error);
   r.onsuccess=()=>{const tx=r.result.transaction("kv",mode),q=fn(tx.objectStore("kv"));tx.oncomplete=()=>ok(q.result);tx.onerror=()=>ng(tx.error)}})}
 const bkStamp=()=>{const d=new Date(),z=n=>String(n).padStart(2,"0");return`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}_${z(d.getHours())}-${z(d.getMinutes())}-${z(d.getSeconds())}`};
-async function bkWrite(name){const f=await bk.dir.getFileHandle(name,{create:true}),w=await f.createWritable();
-  await w.write(JSON.stringify(Object.fromEntries(Object.entries(projects).map(([id,p])=>[id,{id,...body(p)}])),null,1));await w.close()}
+const bkWrite=name=>shWrite(bk.dir,name,Object.fromEntries(Object.entries(projects).map(([id,p])=>[id,{id,...body(p)}])));
 function backupSoon(){ // runs inside the user's click / key, so Chrome may show its permission prompt here
   if(!bk.dir)return;
   if(!bk.ok){if(bk.asked)return;bk.asked=true;bk.dir.requestPermission({mode:"readwrite"}).then(r=>{bk.ok=r==="granted";bkInfo();if(bk.ok)backupSoon()},()=>{});return}
@@ -61,13 +62,13 @@ const VER=document.querySelector(".ver")?.textContent||"",vnum=v=>String(v).slic
 try{const c=JSON.parse(ls.get("mg.shared"));if(c&&c.projects){sh.data=c.projects;sh.at=c.at||0}}catch(e){}
 const shCache=()=>ls.set("mg.shared",JSON.stringify({at:sh.at,projects:sh.data}));
 const isShared=id=>!!(projects[id]?.shared||sh.data[id]);
-const shProjects=()=>Object.fromEntries(Object.entries(sh.data).map(([id,d])=>[id,{...JSON.parse(JSON.stringify(d)),id,shared:true}])); // copies: edits must not touch sh.data
+const shProjects=()=>Object.fromEntries(Object.entries(sh.data).map(([id,d])=>[id,{...structuredClone(d),id,shared:true}])); // copies: edits must not touch sh.data
 const lockLive=l=>!!l&&Date.now()-l.at<LOCK_MS; // ponytail: compares the writer's clock with ours — fine while office PCs keep time
 const lockOther=id=>{const l=sh.locks[id];return lockLive(l)&&l.sid!==SID?l:null}; // someone else is editing this project
 function shRun(f){const r=sh.q.then(f);sh.q=r.catch(()=>{});return r} // one folder operation at a time, so a poll never reads between our read and write
 const shDir=(n="projects")=>sh.dir.getDirectoryHandle(n,{create:true});
 async function shJson(dir,n){try{return JSON.parse(await(await(await dir.getFileHandle(n)).getFile()).text())}catch(e){if(e.name==="NotFoundError")return null;throw e}}
-async function shWrite(dir,n,obj){const fh=await dir.getFileHandle(n,{create:true}),w=await fh.createWritable();await w.write(JSON.stringify(obj,null,1));await w.close();return fh.getFile()}
+async function shWrite(dir,n,obj){const fh=await dir.getFileHandle(n,{create:true}),w=await fh.createWritable();await w.write(JSON.stringify(obj,null,1));await w.close();return fh}
 async function shRead(){ // true when a project file or a lock changed since the last read
   const pd=await shDir(),seen=new Set();let ch=false;
   for await(const[n,h]of pd.entries()){if(h.kind!=="file"||!n.endsWith(".json"))continue;const id=n.slice(0,-5),f=await h.getFile(),k=f.lastModified+":"+f.size;seen.add(id);
@@ -99,7 +100,7 @@ async function shLock(id){ // before saving: take (or keep) the lock. Write, the
   if(sh.mine&&sh.mine!==id)await shUnlockNow();
   await shWrite(ld,n,{by:me,sid:SID,at:Date.now()});l=await shJson(ld,n);
   if(l?.sid!==SID)throw lockedBy(l?.by);
-  sh.mine=id;sh.beat=Date.now();sh.locks[id]=l;if(!dragging)render()} // the corner shows 編集中 at once
+  sh.mine=id;sh.beat=Date.now();sh.locks[id]=l;if(!busy())render()} // the corner shows 編集中 at once
 async function shUnlockNow(){const id=sh.mine;sh.mine=null;if(!id)return;const ld=await shDir("locks"),l=await shJson(ld,id+".json");if(l?.sid===SID)await ld.removeEntry(id+".json")}
 const shUnlock=()=>shRun(shUnlockNow).catch(()=>{}); // switching project, 編集を終了
 const shForce=id=>shRun(async()=>{try{await(await shDir("locks")).removeEntry(id+".json")}catch(e){if(e.name!=="NotFoundError")throw e}delete sh.locks[id]}); // someone else's lock, pressed twice
@@ -107,8 +108,8 @@ async function shPut(id,data){
   if(sh.newVer)throw Object.assign(new Error("version"),{code:"version"});
   await shLock(id);const pd=await shDir(),cur=await shJson(pd,id+".json");
   if((cur?.rev||0)!==(data.rev||0))throw Object.assign(new Error("conflict"),{code:"conflict"}); // saved (or deleted) by someone else since we read it
-  const d={...data,rev:(data.rev||0)+1},f=await shWrite(pd,id+".json",d);
-  sh.files[id]=f.lastModified+":"+f.size;sh.data[id]=d;if(projects[id])projects[id].rev=d.rev;shCache()}
+  const d={...data,rev:(data.rev||0)+1},f=await(await shWrite(pd,id+".json",d)).getFile();
+  sh.files[id]=f.lastModified+":"+f.size;sh.data[id]=structuredClone(d);if(projects[id])projects[id].rev=d.rev;shCache()} // a copy: d holds the open project's own task objects, and sh.data must stay what the file says (see shProjects) — an edit in progress would otherwise look like a change made elsewhere
 async function shRemove(id){await(await shDir()).removeEntry(id+".json");delete sh.data[id];delete sh.files[id];shCache()}
 // local → shared: written under the same ID (a new one if taken), then removed from this browser. Not undoable: it moves, nothing is lost
 async function shMove(p){

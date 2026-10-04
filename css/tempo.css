@@ -102,6 +102,9 @@ select{padding-right:4px}
 .ctx{width:auto;min-width:140px;padding:4px;gap:0}
 .ctx button{font:inherit;font-size:13px;text-align:left;background:none;border:0;border-radius:5px;padding:7px 10px;color:var(--ink);cursor:pointer}
 .ctx button:hover,.ctx button:focus-visible{background:var(--panel2)}
+.ctx button{display:flex;align-items:center}.ctx button:disabled{opacity:.4;cursor:default;background:none}
+.ctx kbd{margin-left:auto;padding-left:24px;font:inherit;font-size:11px;color:var(--ink2)}
+.ctx hr{border:0;border-top:1px solid var(--line2);margin:3px 2px}
 .ctxc{display:flex;align-items:center;gap:6px;padding:4px 4px 2px 10px;margin-top:2px;border-top:1px solid var(--line2);font-size:13px;color:var(--ink2)}
 .ctxc input{width:30px;height:22px;padding:0;border:0;background:none;cursor:pointer}
 .rn{flex:1;min-width:0;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--accent);border-radius:4px;padding:1px 4px}
@@ -190,7 +193,10 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .c-done input{width:16px;height:16px;cursor:pointer;vertical-align:middle}
 .corner .c-d,.corner .c-n,.corner .c-p{font-family:var(--font);font-size:11px}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
+.dot.dv{border-radius:1px} /* a deliverable (成果物): square, same status color */
+.pop .chk{display:flex;align-items:center;gap:6px;font-size:13px}
 .tg{border:0;background:none;width:16px;padding:0;color:var(--ink2);flex:none}
+.tg .fd{display:block;color:var(--pc)}
 .tl{position:relative}
 .bar{--c:var(--st-todo);position:absolute;top:7px;height:20px;border-radius:4px;background:color-mix(in srgb,var(--c) 22%,var(--panel));border:1px solid color-mix(in srgb,var(--c) 75%,var(--panel));overflow:hidden;cursor:grab;touch-action:none;user-select:none}
 .bar .fill{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--c) 70%,var(--panel))}
@@ -227,6 +233,8 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .drawer label.chk{flex-direction:row;align-items:center;gap:6px;color:var(--ink)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .hint{font-size:12px;color:var(--ink2)}
+.drawer #f-par{flex-direction:row;align-items:center;gap:8px;padding:6px 8px;border-left:3px solid var(--accent);border-radius:3px;background:color-mix(in srgb,var(--accent) 14%,var(--panel));color:var(--ink);font-size:13px;font-weight:500} /* where the task sits: must stand out */
+#f-pa{flex:1;min-width:0;font-weight:500}
 .order{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);flex-wrap:wrap}
 .order .btn{height:28px;padding:0 10px}
 .drawer .pj{display:contents}.drawer .pj[hidden]{display:none} /* project-only part of 設定 */
