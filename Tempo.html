@@ -14,7 +14,7 @@
 
 <div class="app">
   <div class="topbar">
-    <div class="brand"><i aria-hidden="true"></i>Tempo<small class="ver">v0.0.5</small></div>
+    <div class="brand"><i aria-hidden="true"><b></b><b style="--n:1"></b><b style="--n:2"></b></i><span role="img" aria-label="Tempo"><b style="--n:3">T</b><b style="--n:4">e</b><b style="--n:5">m</b><b style="--n:6">p</b><b style="--n:7">o</b></span><small class="ver">v0.0.6</small></div>
     <select id="projSel" aria-label="プロジェクト"></select>
     <span class="spacer"></span>
     <span class="mode" id="modeLbl"></span>
@@ -25,11 +25,11 @@
     <div class="seg" role="group" aria-label="表示">
       <button type="button" data-view="gantt">ガント</button><button type="button" data-view="list" title="一覧：タイムラインなしで、タスクと成果物を ID・担当・状況・完了で一覧表示">一覧</button>
     </div>
-    <div class="seg"><button type="button" id="leafBtn" title="一覧で、いちばん上の親タスク（フォルダ）と子タスクのないタスク（成果物）だけを表示。間の親タスクは成果物の名前にマウスを置くと分かります">成果物のみ</button></div>
+    <button type="button" class="sw" id="leafBtn" title="一覧で、いちばん上の親タスク（フォルダ）と成果物のタグが付いたタスクだけを表示。間の親タスクは成果物の名前にマウスを置くと分かります">成果物のみ</button>
     <div class="stats" id="stats"></div>
     <span class="spacer"></span>
-    <input type="search" id="qIn" placeholder="このプロジェクトを検索" aria-label="タスク名で検索" autocomplete="off">
-    <button class="btn" id="projSet" type="button">設定</button>
+    <label class="q"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg><input type="search" id="qIn" placeholder="このプロジェクトを検索" aria-label="タスク名で検索" autocomplete="off"></label>
+    <button class="btn mb" id="projSet" type="button" aria-expanded="false"><span class="ham" aria-hidden="true"><i></i><i></i><i></i></span>設定</button>
   </div>
   <div class="bar2">
     <select id="whoSel" aria-label="担当者で絞り込み"></select>
@@ -66,7 +66,7 @@
     <span class="selinfo" id="selInfo"></span>
     <form class="asform" id="asForm" hidden><span id="asLbl"></span><input id="asIn" list="members" placeholder="担当者名" autocomplete="off"><select id="asSel"></select><button class="btn pri" type="submit" id="asOk">追加</button><button class="btn" type="button" id="asCancel">やめる</button></form>
   </div>
-  <div class="chart" id="chart"><div class="empty">読み込み中…</div></div>
+  <div class="chart" id="chart"><div class="empty"><i class="spin"></i>読み込み中…</div></div>
 </div>
 
 <datalist id="members"></datalist>
@@ -83,7 +83,7 @@
     <label>進捗 <output id="f-po">0%</output><input type="range" id="f-p" min="0" max="100" step="5"></label>
     <label class="chk"><input type="checkbox" id="f-ms">マイルストーン（◆で表示）</label>
     <label class="chk" title="成果物のタグ：一覧の「成果物のみ」に表示され、名前の前の印が四角になります"><input type="checkbox" id="f-dv">成果物</label>
-    <label>メモ<textarea id="f-memo" rows="3"></textarea></label>
+    <label>メモ<span class="memo"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><textarea id="f-memo" rows="6"></textarea></span></label>
     <footer><button class="btn pri" type="submit">保存</button><button class="btn danger" type="button" id="taskDel">削除</button></footer>
   </form>
   <form id="projForm" hidden>

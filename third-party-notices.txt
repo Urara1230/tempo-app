@@ -1,0 +1,42 @@
+Third-party notices for Tempo
+=============================
+
+The look of some controls in css/tempo.css (and the search icon in Tempo.html) is adapted from
+elements published on Uiverse.io (https://uiverse.io, repository https://github.com/uiverse-io/galaxy).
+They were re-done with Tempo's own colors, sizes and markup; the rules in tempo.css name their model.
+
+  Element (galaxy path)                        Author        Used for
+  Buttons/ErzenXz_slimy-chicken-63             ErzenXz       buttons, selects
+  Radio-buttons/Yaya12085_rude-mouse-79        Yaya12085     view / scale switches (segmented control)
+  Toggle-switches/adamgiebl_grumpy-moth-36     adamgiebl     the on / off switch
+  Checkboxes/PriyanshuGupta28_quick-wolverine-69  PriyanshuGupta28  checkboxes (the box that turns into the tick)
+  Inputs/escannord_hot-yak-44                  escannord     search box with the magnifier icon
+  loaders/Fernando-sv_quiet-zebra-41           Fernando-sv   loading ring
+  Checkboxes/Jack17432_shaggy-earwig-15        Jack17432     the three lines that turn into a cross (settings button)
+  Cards/emmanuelh-dev_ancient-pig-83           emmanuelh-dev  the card with three dots (note field in the task panel)
+  Toggle-switches/Cksunandh_massive-firefox-41 Cksunandh     the switch with a padlock on its knob (edit lock of shared projects)
+  loaders/ClawHack1_evil-panda-55              ClawHack1     the swelling one after another (the title in the top bar, on hover)
+
+These elements are available under the MIT License:
+
+MIT License
+
+Copyright (c) 2023 Uiverse.io
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

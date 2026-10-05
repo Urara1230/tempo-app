@@ -1,17 +1,18 @@
 // Interactions: drawer forms, members, milestones, popups, context menu, drag & drop, selection, toolbar, keyboard.
 /* ---------- actions ---------- */
-function setCur(id){if(sh.mine&&sh.mine!==id)shUnlock();lkArmed=false;view.q=$("qIn").value="";curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
+function setCur(id){if(sh.mine&&sh.mine!==id)shUnlock();lkArmed=false;lkWas="";view.q=$("qIn").value="";curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
 function newProject(){
   if(storeRO)return;
   const id=uid();projects[id]={id,name:"新しいプロジェクト",tasks:[]};setCur(id);save(projects[id]);openProject();
 }
 const drawer=$("drawer");
-function closeDrawer(){drawer.hidden=true;$("taskForm").hidden=true;$("projForm").hidden=true;if(editingId){editingId=null;render()}}
+const setTgl=()=>$("projSet").setAttribute("aria-expanded",!$("projForm").hidden); // the 設定 button shows a cross while its panel is open
+function closeDrawer(){drawer.hidden=true;$("taskForm").hidden=true;$("projForm").hidden=true;setTgl();if(editingId){editingId=null;render()}}
 function armReset(){document.querySelectorAll(".danger").forEach(b=>{b.classList.remove("arm");b.textContent=b.id==="projDel"?"このプロジェクトを削除":"削除"})}
 function openTask(id){
   const p=projects[curId],all=derive(p),r=all.find(x=>x.id===id);if(!r)return;
   editingId=id;armReset();
-  drawer.hidden=false;$("projForm").hidden=true;$("taskForm").hidden=false;
+  drawer.hidden=false;$("projForm").hidden=true;$("taskForm").hidden=false;setTgl();
   parOpts(all,r);FF.forEach(([k,get])=>fset(k,get(r,all)));formInit=Object.fromEntries(FF.map(([k])=>[k,fval(k)]));
   ["f-s","f-e","f-p","f-ms","f-dv"].forEach(k=>$(k).disabled=!!r.parent||readOnly);$("f-pa").disabled=readOnly;
   formExtras(r);
@@ -42,7 +43,7 @@ function syncForm(){
 function bizHint(){const s=$("f-s").value,e=$("f-e").value;if(!s||!e)return"";if(e<s)return"終了日が開始日より前です";return`${biz(D(s),D(e))} 営業日（土日祝・会社の休日を除く）`}
 function openProject(){
   const p=projects[curId];armReset();
-  drawer.hidden=false;$("taskForm").hidden=true;$("projForm").hidden=false;
+  drawer.hidden=false;$("taskForm").hidden=true;$("projForm").hidden=false;setTgl();
   document.querySelectorAll("#projForm .pj").forEach(e=>e.hidden=!p);$("projDel").hidden=!p; // without a project: only this PC's folders and ＋ プロジェクト
   bkInfo();shInfo();if(!p)return;$("p-name").value=p.name||"";$("p-json").value=JSON.stringify({name:p.name,members:roster(p),tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[]},null,1);rosterChips();
 }
@@ -209,11 +210,11 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!drawer.hidden)clos
 
 $("projSel").addEventListener("change",e=>setCur(e.target.value));
 $("projNew").addEventListener("click",newProject);
-$("projSet").addEventListener("click",openProject);
+$("projSet").addEventListener("click",()=>$("projForm").hidden?openProject():closeDrawer()); // it shows a cross while open: pressing it again closes
 $("meSel").addEventListener("change",e=>{me=e.target.value;ls.set("mg.me",me);render()});
 $("whoSel").addEventListener("change",e=>{view.who=e.target.value;render()});
 document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>{view.list=b.dataset.view==="list";ls.set("mg.view",view.list?"list":"gantt");render()}));
-$("leafBtn").addEventListener("click",()=>{view.leaf=!view.leaf;ls.set("mg.leaf",view.leaf?"1":"");render()}); // 一覧: only tasks without sub-tasks
+$("leafBtn").addEventListener("click",()=>{view.leaf=!view.leaf;ls.set("mg.leaf",view.leaf?"1":"");render()}); // 一覧: only the top folders and the tagged tasks (deliverables)
 $("todayBtn").addEventListener("click",scrollToToday);
 document.querySelectorAll("[data-scale]").forEach(b=>b.addEventListener("click",()=>{view.scale=b.dataset.scale;ls.set("mg.scale",view.scale);render()}));
 $("qIn").addEventListener("input",e=>{view.q=e.target.value.trim().toLowerCase();render()}); // search this project by task name
@@ -262,9 +263,14 @@ chart.addEventListener("click",e=>{
   if(e.target.closest("[data-pg]"))return;
   if(e.target.closest("[data-ids]")){view.ids=!view.ids;ls.set("mg.ids",view.ids?"1":"");render();return} // 一覧: fold / unfold the ID column
   const dn=e.target.closest("[data-done]");if(dn){const p=projects[curId],t=p.tasks.find(x=>x.id===dn.dataset.done); // 一覧: 完了 checkbox
-    if(t&&!readOnly){t.progress=dn.checked?100:0;save(p)}return}
-  const lk=e.target.closest("[data-lk]");if(lk){const id=curId; // edit lock: 編集を終了 / ロックを解除 (twice)
+    if(t&&!readOnly){t.progress=dn.checked?100:0;save(p);
+      // the save drew the row again with the box already in its new state, so the box → tick motion never ran: put the new box
+      // back to the old state without motion (.still), then let it go to the new one
+      const n=document.querySelector(`[data-done="${CSS.escape(t.id)}"]`);if(n){n.classList.add("still");n.checked=!n.checked;void n.offsetWidth;n.classList.remove("still");n.checked=!n.checked}}
+    return}
+  const lk=e.target.closest("[data-lk]");if(lk){const id=curId; // edit lock, the switch in the corner: mine = end editing / nobody's = take it / someone else's = release (twice)
     if(lk.dataset.lk==="end")shUnlock().then(()=>{render();toast("編集を終了しました")});
+    else if(lk.dataset.lk==="take")shRun(()=>shLock(id)).then(()=>{render();toast("ロックしました（編集中）")},err=>toast(err.code==="locked"?`${err.by||"ほかの人"}さんが編集中です`:"ロックできませんでした")); // the switch, off: lock now, without an edit
     else if(!lkArmed){lkArmed=true;render()}
     else{lkArmed=false;shForce(id).then(()=>{render();toast("ロックを解除しました")},()=>toast("ロックを解除できませんでした"))}
     return}

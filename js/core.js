@@ -36,7 +36,7 @@ let view={scale:["week","month"].includes(ls.get("mg.scale"))?ls.get("mg.scale")
 let visOrder=[];
 let collapsed=new Set(), editingId=null, dragging=false, scrolledFor=null, range=null;
 const pendingIds=new Set(), timers={};
-let sel=new Set(), lastSel=null, clip=null, delArmed=false, lkArmed=false; // lkArmed: ロックを解除 pressed once
+let sel=new Set(), lastSel=null, clip=null, delArmed=false, lkArmed=false, lkWas=""; // lkArmed: someone else's lock pressed once; lkWas: the lock switch as last drawn ("true" / "false", view.js lockBar)
 let chain=Promise.resolve();
 
 // share of the task's own workdays already past (to yesterday), 0–1
