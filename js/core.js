@@ -35,7 +35,7 @@ let me=ls.get("mg.me")||""; // who I am, picked from the roster, kept in this br
 let view={scale:["week","month"].includes(ls.get("mg.scale"))?ls.get("mg.scale"):"day",list:ls.get("mg.view")==="list",ids:ls.get("mg.ids")==="1",leaf:ls.get("mg.leaf")==="1",who:"",st:"",q:""}; // ids: the ID column of 一覧 is open (folded by default) // leaf: 一覧 shows only tasks without sub-tasks // list: 一覧 instead of the chart
 let visOrder=[];
 let collapsed=new Set(), editingId=null, dragging=false, scrolledFor=null, range=null;
-const pendingIds=new Set(), timers={};
+const pendingIds=new Set(), timers={}, retry={}; // retry: id → saves of it that failed in a row (flush): the change stays on screen and is tried again
 let sel=new Set(), lastSel=null, clip=null, delArmed=false, lkArmed=false, lkWas=""; // lkArmed: someone else's lock pressed once; lkWas: the lock switch as last drawn ("true" / "false", view.js lockBar)
 let chain=Promise.resolve();
 
@@ -115,13 +115,20 @@ function flush(id){
   delete timers[id];
   const p=projects[id];
   chain=chain.then(()=>p?store.put(id,body(p)):store.remove(id))
-    .catch(err=>{if(err&&err.code==="invalid_argument"){storeRO=true;render();toast("編集権限がないため保存できません");}
+    .then(()=>{if(retry[id]){delete retry[id];toast("保存しました");if(!busy())render()}})
+    .catch(err=>{const again=retry[id];delete retry[id];
+      if(err&&err.code==="invalid_argument"){storeRO=true;render();toast("編集権限がないため保存できません");}
       else if(err&&err.name==="QuotaExceededError")toast("ブラウザに保存できませんでした（保存領域がいっぱいです）。「保存」でバックアップを取り、使わないプロジェクトを削除してください");
       else if(err&&err.code==="version")toast(`新しいバージョン ${sh.newVer} があるため保存しませんでした。Tempo.bat から開き直してください`);
       else if(err&&(err.code==="conflict"||err.code==="locked")){setTimeout(()=>sh.emit?.()); // show the latest content instead of the change that was not saved
-        toast(err.code==="locked"?`${err.by||"ほかの人"}さんが編集中のため、この変更は保存しませんでした`:"ほかの人が先に保存していたため、この変更は保存しませんでした。最新の内容を表示します")}else toast("保存できませんでした。もう一度お試しください")})
+        toast(err.code==="locked"?`${err.by||"ほかの人"}さんが編集中のため、この変更は保存しませんでした`:"ほかの人が先に保存していたため、この変更は保存しませんでした。最新の内容を表示します")}
+      else{ // anything else — e.g. a file the shared drive would not replace just then. The change stays on screen, still counted as not saved
+        // (a sync won't swap it for the file's content), and is tried again: after 1 s, then 2, 3, 4, and every 5 s
+        console.error(err);retry[id]=(again||0)+1;if(!timers[id])timers[id]=setTimeout(()=>flush(id),Math.min(retry[id],5)*1000);
+        if(!again)toast(`保存できませんでした（${err&&err.name||"Error"}）。変更はこの画面に残っています。自動で再試行します`);if(!busy())render()}})
     .finally(()=>{if(!timers[id])pendingIds.delete(id)});
 }
+addEventListener("beforeunload",e=>{if(pendingIds.size){e.preventDefault();e.returnValue=""}}); // a change not written yet (the 0.4 s wait, a write under way, a retry): the browser asks before the page closes
 // all projects from storage (at start, and when changed elsewhere); keeps local edits not yet saved
 function onData(all){
   const next={};

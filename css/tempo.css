@@ -91,6 +91,7 @@ input[type="range"]{accent-color:var(--accent)}
 /* top bar, after Brabio: dark strip with the brand and the open project; storage state, 保存 and 自分 on the right */
 .topbar{display:flex;align-items:center;gap:10px;margin:-12px -16px 0;padding:6px 16px;background:var(--bar);color:var(--bar-ink)}
 .topbar .brand .ver,.topbar .mode{color:#9FB0BA}
+.topbar .mode.warn{color:#F2A33C;font-weight:700} /* a save failed and is being tried again */
 .topbar #projSel{font-weight:500;max-width:40vw}
 .topbar select,.topbar .btn{height:26px;color:var(--ink)}
 /* search: a magnifier inside the box on the left — after Uiverse.io, escannord "hot-yak-44" (picked by the user) */

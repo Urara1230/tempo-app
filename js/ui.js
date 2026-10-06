@@ -1,6 +1,6 @@
 // Interactions: drawer forms, members, milestones, popups, context menu, drag & drop, selection, toolbar, keyboard.
 /* ---------- actions ---------- */
-function setCur(id){if(sh.mine&&sh.mine!==id)shUnlock();lkArmed=false;lkWas="";view.q=$("qIn").value="";curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
+function setCur(id){if(sh.mine&&sh.mine!==id)shEnd();lkArmed=false;lkWas="";view.q=$("qIn").value="";curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
 function newProject(){
   if(storeRO)return;
   const id=uid();projects[id]={id,name:"新しいプロジェクト",tasks:[]};setCur(id);save(projects[id]);openProject();
@@ -269,8 +269,8 @@ chart.addEventListener("click",e=>{
       const n=document.querySelector(`[data-done="${CSS.escape(t.id)}"]`);if(n){n.classList.add("still");n.checked=!n.checked;void n.offsetWidth;n.classList.remove("still");n.checked=!n.checked}}
     return}
   const lk=e.target.closest("[data-lk]");if(lk){const id=curId; // edit lock, the switch in the corner: mine = end editing / nobody's = take it / someone else's = release (twice)
-    if(lk.dataset.lk==="end")shUnlock().then(()=>{render();toast("編集を終了しました")});
-    else if(lk.dataset.lk==="take")shRun(()=>shLock(id)).then(()=>{render();toast("ロックしました（編集中）")},err=>toast(err.code==="locked"?`${err.by||"ほかの人"}さんが編集中です`:"ロックできませんでした")); // the switch, off: lock now, without an edit
+    if(lk.dataset.lk==="end")shEnd(true).then(ok=>{render();toast(ok?"編集を終了しました":"未保存の変更があります。保存が終わるまで編集を終了できません")});
+    else if(lk.dataset.lk==="take")shTake(id).then(()=>{render();toast("編集を始めました（ほかの人は閲覧のみ）")},err=>toast(err.code==="locked"?`${err.by||"ほかの人"}さんが編集中です`:"ロックできませんでした")); // the switch, off: lock, read the latest, and editing starts
     else if(!lkArmed){lkArmed=true;render()}
     else{lkArmed=false;shForce(id).then(()=>{render();toast("ロックを解除しました")},()=>toast("ロックを解除できませんでした"))}
     return}

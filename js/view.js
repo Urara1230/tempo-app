@@ -9,7 +9,7 @@ function renderToolbar(){
   const ids=Object.keys(projects).sort((a,b)=>(projects[a].name||"").localeCompare(projects[b].name||""));
   $("projSel").innerHTML=ids.map(id=>`<option value="${esc(id)}"${id===curId?" selected":""}>${projects[id].shared?"👥 ":""}${esc(projects[id].name||"無題")}</option>`).join("")||`<option>プロジェクトなし</option>`;
   const p=projects[curId];
-  readOnly=storeRO||!!(p?.shared&&(!sh.ok||sh.err||sh.newVer||!me||lockOther(p.id))); // a shared project: read-only offline, after a newer version, without a name, or while someone else edits it
+  readOnly=storeRO||!!(p?.shared&&(!sh.ok||sh.err||sh.newVer||!me||sh.mine!==p.id)); // a shared project is edited only while this page holds its lock (the switch in the corner): read-only otherwise — also offline, after a newer version, without a name
   const ms=p?members(p):[];
   if(view.who&&!ms.includes(view.who))view.who="";
   $("whoSel").innerHTML=`<option value="">（全員）</option>`+ms.map(m=>`<option${m===view.who?" selected":""}>${esc(m)}</option>`).join("");
@@ -21,7 +21,8 @@ function renderToolbar(){
   const shLbl=!p?.shared?"":!sh.dir?"共有フォルダが未設定です（閲覧のみ）":!sh.ok?"共有フォルダ：画面をクリックすると接続します（閲覧のみ）"
     :sh.err?`共有フォルダに接続できません（最終取得 ${sh.at?new Date(sh.at).toTimeString().slice(0,5):"—"}）`
     :sh.newVer?`新しいバージョン ${sh.newVer} があります。Tempo.bat から開き直してください（それまで閲覧のみ）`:"共有フォルダと同期中";
-  $("modeLbl").textContent=store?(storeRO?"閲覧のみ":shLbl||store.label):"";
+  const uns=Object.keys(retry).length>0; // a save failed and is being tried again (core.js flush)
+  $("modeLbl").textContent=store?(uns?"未保存の変更があります（再試行中）｜":"")+(storeRO?"閲覧のみ":shLbl||store.label):"";$("modeLbl").classList.toggle("warn",uns);
   if(!p){$("stats").innerHTML=$("chips").innerHTML="";return}
   const {rows,pct,mn,mx}=overall(p);
   const cnt={};rows.forEach(r=>cnt[r.st]=(cnt[r.st]||0)+1);
@@ -33,14 +34,14 @@ function renderToolbar(){
     (view.st?`<button type="button" class="chip" data-st="">絞り込み解除</button>`:"");
 }
 
-// edit lock in the task table's corner (shared projects only): a switch with a padlock on its knob. Off = nobody edits (a press takes the lock; so does
-// the first edit). On = locked: mine (a press ends editing) or someone else's (.other; pressed twice it is released). Without 自分 it is shut, grey, and can't be pressed.
+// edit lock in the task table's corner (shared projects only): a switch with a padlock on its knob. Off = nobody edits, the project is read-only
+// (a press takes the lock and editing starts). On = locked: mine (a press ends editing) or someone else's (.other; pressed twice it is released). Without 自分 it is shut, grey, and can't be pressed.
 // data-on = the state now; it is drawn in the state it had last time (lkWas) and render() then moves it, so the switch's motion runs
 function lockBar(p){if(!p.shared||!sh.ok||sh.err||sh.newVer)return"";const o=lockOther(p.id);if(!o)lkArmed=false;
   const mine=sh.mine===p.id,on=String(!me||!!o||mine),was=lkWas||on;lkWas=on;
   return`<div class="lk"><button type="button" class="sw lock${o?" other":""}${lkArmed?" arm":""}" data-lk="${o?"force":mine?"end":"take"}" data-on="${on}" aria-pressed="${was}"${me?"":" disabled"} title="${!me?"":o?"2 回押すと、ロックを強制的に解除します":mine?"押すと編集を終了します":"押すとロックして編集を始めます"}"><em></em>${!me?"上の「自分」で名前を選ぶと編集できます"
     :o?(lkArmed?`もう一度押すと${esc(o.by||"")}さんのロックを解除`:`${esc(o.by||"だれか")}さんが編集中（閲覧のみ）`)
-    :mine?"編集中（ほかの人は閲覧のみ）":"だれも編集していません（編集を始めると自動でロック）"}</button></div>`}
+    :mine?"編集中（ほかの人は閲覧のみ）":"閲覧のみ（編集するにはこのスイッチを押します）"}</button></div>`}
 const isDv=r=>!!r.deliverable&&!r.parent; // a deliverable (成果物): tagged, and only while it has no sub-tasks — like the milestone flag
 // 一覧 view, 完了 column: a leaf has a checkbox (100% ⇄ 0%); a parent shows 完了 when every task under it is done, else done / all.
 // dvOnly (成果物のみ): a folder counts its deliverables only, — when it has none
