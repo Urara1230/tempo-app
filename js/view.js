@@ -39,9 +39,9 @@ function renderToolbar(){
 // data-on = the state now; it is drawn in the state it had last time (lkWas) and render() then moves it, so the switch's motion runs
 function lockBar(p){if(!p.shared||!sh.ok||sh.err||sh.newVer)return"";const o=lockOther(p.id);if(!o)lkArmed=false;
   const mine=sh.mine===p.id,on=String(!me||!!o||mine),was=lkWas||on;lkWas=on;
-  return`<div class="lk"><button type="button" class="sw lock${o?" other":""}${lkArmed?" arm":""}" data-lk="${o?"force":mine?"end":"take"}" data-on="${on}" aria-pressed="${was}"${me?"":" disabled"} title="${!me?"":o?"2 回押すと、ロックを強制的に解除します":mine?"押すと編集を終了します":"押すとロックして編集を始めます"}"><em></em>${!me?"上の「自分」で名前を選ぶと編集できます"
+  return`<div class="lk"><button type="button" class="sw lock${o?" other":""}${lkArmed||mine&&sh.bare?" arm":""}" data-lk="${o?"force":mine?"end":"take"}" data-on="${on}" aria-pressed="${was}"${me?"":" disabled"} title="${!me?"":o?"2 回押すと、ロックを強制的に解除します":mine?"押すと編集を終了します":"押すとロックして編集を始めます"}"><em></em>${!me?"上の「自分」で名前を選ぶと編集できます"
     :o?(lkArmed?`もう一度押すと${esc(o.by||"")}さんのロックを解除`:`${esc(o.by||"だれか")}さんが編集中（閲覧のみ）`)
-    :mine?"編集中（ほかの人は閲覧のみ）":"閲覧のみ（編集するにはこのスイッチを押します）"}</button></div>`}
+    :mine?(sh.bare?"編集中（ロックなし：ほかの人も同時に編集できます）":"編集中（ほかの人は閲覧のみ）"):"閲覧のみ（編集するにはこのスイッチを押します）"}</button></div>`}
 const isDv=r=>!!r.deliverable&&!r.parent; // a deliverable (成果物): tagged, and only while it has no sub-tasks — like the milestone flag
 // 一覧 view, 完了 column: a leaf has a checkbox (100% ⇄ 0%); a parent shows 完了 when every task under it is done, else done / all.
 // dvOnly (成果物のみ): a folder counts its deliverables only, — when it has none

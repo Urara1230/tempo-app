@@ -31,6 +31,15 @@ const $=id=>document.getElementById(id);
 const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 
 let projects={}, curId=ls.get("mg.cur"), store=null, storeRO=false, readOnly=false; // store: the backend from storage.js, null while loading. readOnly: the open project can't be edited (storeRO, or shared and offline) — set by render
+/* log (v0.0.8): what happened on this page, for finding bugs afterwards — one line per event: commands, what each save changed, the lock, what was
+   read from the shared folder, errors. Ids and field names only: no task names, no notes. storage.js (shLog) appends the lines to the shared folder's
+   logs/; what could not be written yet is kept over a page close in mg.log */
+const logBuf=[];try{logBuf.push(...JSON.parse(ls.get("mg.log")||"[]"))}catch(e){}ls.set("mg.log","");
+const errInfo=e=>e&&{name:e.name,code:e.code,msg:String(e.message||e).slice(0,200)};
+function log(ev,d){const t=new Date();logBuf.push(`${t.toLocaleString("sv")}.${String(t.getMilliseconds()).padStart(3,"0")}\t${typeof SID==="string"?SID:"-"}\t${ev}\t${d===undefined?"":JSON.stringify(d)}`);if(logBuf.length>3000)logBuf.shift()}
+addEventListener("error",e=>log("error",{msg:String(e.message).slice(0,200),at:String(e.filename||"").split("/").pop()+":"+e.lineno}));
+addEventListener("unhandledrejection",e=>log("error",errInfo(e.reason)));
+addEventListener("pagehide",()=>{if(logBuf.length)ls.set("mg.log",JSON.stringify(logBuf.slice(-500)))});
 let me=ls.get("mg.me")||""; // who I am, picked from the roster, kept in this browser
 let view={scale:["week","month"].includes(ls.get("mg.scale"))?ls.get("mg.scale"):"day",list:ls.get("mg.view")==="list",ids:ls.get("mg.ids")==="1",leaf:ls.get("mg.leaf")==="1",who:"",st:"",q:""}; // ids: the ID column of 一覧 is open (folded by default) // leaf: 一覧 shows only tasks without sub-tasks // list: 一覧 instead of the chart
 let visOrder=[];
@@ -102,21 +111,27 @@ const hist={};let restoring=false;
 const snap=p=>JSON.stringify({name:p.name,tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[],members:p.members||null});
 function H(id){return hist[id]||(hist[id]={u:[],r:[],last:null})}
 function undo(redo){
-  const p=projects[curId];if(!p||readOnly)return;const h=H(p.id),from=redo?h.r:h.u,to=redo?h.u:h.r;
+  const p=projects[curId];if(!p||readOnly)return;log(redo?"redo":"undo",{p:p.id});const h=H(p.id),from=redo?h.r:h.u,to=redo?h.u:h.r;
   if(!from.length){toast(redo?"やり直す操作がありません":"元に戻す操作がありません");return}
   to.push(h.last);const s=JSON.parse(from.pop());p.name=s.name;p.tasks=s.tasks;p.milestones=s.milestones;p.holidays=s.holidays;p.members=s.members||undefined;
   closeDrawer();$("asForm").hidden=true;delArmed=false;restoring=true;save(p);restoring=false;toast(redo?"やり直しました":"元に戻しました");
 }
+// what a save changed, for the log: the ids of the tasks added and removed, for a changed task its id and the names of the fields — no values
+function changes(a,b){const A=JSON.parse(a),B=JSON.parse(b),by=Object.fromEntries(A.tasks.map(t=>[t.id,t])),now=new Set(B.tasks.map(t=>t.id)),js=JSON.stringify,cap=x=>x.length>30?[...x.slice(0,30),"+"+(x.length-30)]:x,o={};
+  const add=B.tasks.filter(t=>!by[t.id]).map(t=>t.id),del=A.tasks.filter(t=>!now.has(t.id)).map(t=>t.id);
+  const ch=B.tasks.filter(t=>by[t.id]&&js(t)!==js(by[t.id])).map(t=>t.id+":"+[...new Set([...Object.keys(t),...Object.keys(by[t.id])])].filter(k=>js(t[k])!==js(by[t.id][k])).join(","));
+  const etc=["name","milestones","holidays","members"].filter(k=>js(A[k])!==js(B[k]));if(!add.length&&!del.length&&js(A.tasks.map(t=>t.id))!==js(B.tasks.map(t=>t.id)))etc.push("order");
+  if(add.length)o.add=cap(add);if(del.length)o.del=cap(del);if(ch.length)o.ch=cap(ch);if(etc.length)o.etc=etc;return o}
 function save(p){p.updatedAt=Date.now();const m=applyLinks(p);
-  const h=H(p.id),cur=snap(p);if(!restoring&&h.last!=null&&h.last!==cur){h.u.push(h.last);if(h.u.length>50)h.u.shift();h.r=[]}h.last=cur; // ponytail: whole-project snapshots, fine at this size
+  const h=H(p.id),cur=snap(p);if(h.last!==cur)log("save",{p:p.id,...(h.last!=null?changes(h.last,cur):{})});if(!restoring&&h.last!=null&&h.last!==cur){h.u.push(h.last);if(h.u.length>50)h.u.shift();h.r=[]}h.last=cur; // ponytail: whole-project snapshots, fine at this size
   render();queue(p.id);if(m)toast("リンク先のタスクを後ろにずらしました")}
 function queue(id){backupSoon();pendingIds.add(id);clearTimeout(timers[id]);timers[id]=setTimeout(()=>flush(id),400)}
 function flush(id){
   delete timers[id];
   const p=projects[id];
   chain=chain.then(()=>p?store.put(id,body(p)):store.remove(id))
-    .then(()=>{if(retry[id]){delete retry[id];toast("保存しました");if(!busy())render()}})
-    .catch(err=>{const again=retry[id];delete retry[id];
+    .then(()=>{if(retry[id]){log("save-retry-ok",{p:id,after:retry[id]});delete retry[id];toast("保存しました");if(!busy())render()}})
+    .catch(err=>{const again=retry[id];delete retry[id];log("save-fail",{p:id,try:(again||0)+1,...errInfo(err)});
       if(err&&err.code==="invalid_argument"){storeRO=true;render();toast("編集権限がないため保存できません");}
       else if(err&&err.name==="QuotaExceededError")toast("ブラウザに保存できませんでした（保存領域がいっぱいです）。「保存」でバックアップを取り、使わないプロジェクトを削除してください");
       else if(err&&err.code==="version")toast(`新しいバージョン ${sh.newVer} があるため保存しませんでした。Tempo.bat から開き直してください`);

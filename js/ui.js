@@ -1,6 +1,6 @@
 // Interactions: drawer forms, members, milestones, popups, context menu, drag & drop, selection, toolbar, keyboard.
 /* ---------- actions ---------- */
-function setCur(id){if(sh.mine&&sh.mine!==id)shEnd();lkArmed=false;lkWas="";view.q=$("qIn").value="";curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
+function setCur(id){log("project",{p:id});if(sh.mine&&sh.mine!==id)shEnd();lkArmed=false;lkWas="";view.q=$("qIn").value="";curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
 function newProject(){
   if(storeRO)return;
   const id=uid();projects[id]={id,name:"新しいプロジェクト",tasks:[]};setCur(id);save(projects[id]);openProject();
@@ -270,7 +270,7 @@ chart.addEventListener("click",e=>{
     return}
   const lk=e.target.closest("[data-lk]");if(lk){const id=curId; // edit lock, the switch in the corner: mine = end editing / nobody's = take it / someone else's = release (twice)
     if(lk.dataset.lk==="end")shEnd(true).then(ok=>{render();toast(ok?"編集を終了しました":"未保存の変更があります。保存が終わるまで編集を終了できません")});
-    else if(lk.dataset.lk==="take")shTake(id).then(()=>{render();toast("編集を始めました（ほかの人は閲覧のみ）")},err=>toast(err.code==="locked"?`${err.by||"ほかの人"}さんが編集中です`:"ロックできませんでした")); // the switch, off: lock, read the latest, and editing starts
+    else if(lk.dataset.lk==="take")shTake(id).then(()=>{render();toast(sh.bare?"ロックのファイルを作れなかったため、ロックなしで編集します":"編集を始めました（ほかの人は閲覧のみ）")},err=>{render();toast(err.code==="locked"?`${err.by||"ほかの人"}さんが編集中です`:`ロックできませんでした（${err&&err.name||"Error"}）`)}); // the switch, off: lock, read the latest, and editing starts
     else if(!lkArmed){lkArmed=true;render()}
     else{lkArmed=false;shForce(id).then(()=>{render();toast("ロックを解除しました")},()=>toast("ロックを解除できませんでした"))}
     return}
@@ -467,7 +467,7 @@ function renderTools(){
 }
 const leafView=()=>view.list&&view.leaf; // 一覧「成果物のみ」: the rows between the folder and the deliverables are not on screen
 function cmd(c){
-  const p=projects[curId];if(!p)return;if(readOnly&&c!=="copy")return;
+  const p=projects[curId];if(!p)return;log("cmd",{c,ids:[...sel].slice(0,30)});if(readOnly&&c!=="copy")return;
   const ts=p.tasks;const idx=selIdx(p);const first=idx[0],last=idx.length?blockEnd(ts,idx[idx.length-1]):-1,lastTop=ts[idx[idx.length-1]]; // lastTop: the last selected row — what is put "below the selection" becomes its sibling
   if(c!=="del")delArmed=false;
   if(leafView()&&(c==="indent"||c==="outdent")){toast("階層の変更は「成果物のみ」を解除してから行ってください");return} // the row above / below in the data may be hidden here: a row would turn into a hidden parent and vanish (same reason as no drop "into" a row)
