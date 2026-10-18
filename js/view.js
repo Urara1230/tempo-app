@@ -17,7 +17,7 @@ function renderToolbar(){
   $("members").innerHTML=ms.map(m=>`<option value="${esc(m)}">`).join("");
   document.querySelectorAll("[data-scale]").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.scale===view.scale);b.disabled=view.list});$("todayBtn").disabled=view.list; // no timeline in 一覧
   document.querySelectorAll("[data-view]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.view==="list")===view.list));
-  $("leafBtn").setAttribute("aria-pressed",view.leaf);$("leafBtn").disabled=!view.list; // 一覧 only
+  $("leafBtn").setAttribute("aria-pressed",view.leaf); // 一覧 and the chart alike (v0.0.9; until then 一覧 only)
   const shLbl=!p?.shared?"":!sh.dir?"共有フォルダが未設定です（閲覧のみ）":!sh.ok?"共有フォルダ：画面をクリックすると接続します（閲覧のみ）"
     :sh.err?`共有フォルダに接続できません（最終取得 ${sh.at?new Date(sh.at).toTimeString().slice(0,5):"—"}）`
     :sh.newVer?`新しいバージョン ${sh.newVer} があります。Tempo.bat から開き直してください（それまで閲覧のみ）`:"共有フォルダと同期中";
@@ -42,6 +42,11 @@ function lockBar(p){if(!p.shared||!sh.ok||sh.err||sh.newVer)return"";const o=loc
   return`<div class="lk"><button type="button" class="sw lock${o?" other":""}${lkArmed||mine&&sh.bare?" arm":""}" data-lk="${o?"force":mine?"end":"take"}" data-on="${on}" aria-pressed="${was}"${me?"":" disabled"} title="${!me?"":o?"2 回押すと、ロックを強制的に解除します":mine?"押すと編集を終了します":"押すとロックして編集を始めます"}"><em></em>${!me?"上の「自分」で名前を選ぶと編集できます"
     :o?(lkArmed?`もう一度押すと${esc(o.by||"")}さんのロックを解除`:`${esc(o.by||"だれか")}さんが編集中（閲覧のみ）`)
     :mine?(sh.bare?"編集中（ロックなし：ほかの人も同時に編集できます）":"編集中（ほかの人は閲覧のみ）"):"閲覧のみ（編集するにはこのスイッチを押します）"}</button></div>`}
+// start / end date cells: a small ½ marks a half day (the cell is too narrow for 午後 / 午前; the tooltip says which)
+const dS=h=>md(h>>1)+(h&1?'<sup class="half" title="午後から">½</sup>':""),dE=h=>md(h>>1)+(h&1?"":'<sup class="half" title="午前まで">½</sup>');
+// days off (土日・祝日・会社の休日, as for 営業日) on a bar running from slot h0 to h1: grey pieces, days off in a row as one (v0.0.9). dw = a day's width
+function offSegs(h0,h1,dw){let o="";for(let n=h0>>1;n<=h1>>1;n++)if(isOff(n)){let m=n;while(m<h1>>1&&isOff(m+1))m++;const a0=Math.max(2*n,h0),b0=Math.min(2*m+1,h1);
+  o+=`<i class="offd" style="left:${(a0-h0)*dw/2}px;width:${(b0-a0+1)*dw/2}px"></i>`;n=m}return o}
 const isDv=r=>!!r.deliverable&&!r.parent; // a deliverable (成果物): tagged, and only while it has no sub-tasks — like the milestone flag
 // 一覧 view, 完了 column: a leaf has a checkbox (100% ⇄ 0%); a parent shows 完了 when every task under it is done, else done / all.
 // dvOnly (成果物のみ): a folder counts its deliverables only, — when it has none
@@ -64,7 +69,7 @@ function render(){
   if(sc==="month"){const d=dt(a);a=D(`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-01`)}
   range={a,b,dw};
   const tw=(b-a+1)*dw;
-  const X=n=>(n-a)*dw;
+  const X=n=>(n-a)*dw,XH=h=>(h/2-a)*dw; // XH: where a half-day slot starts
 
   // header
   let top="",bot="",bg="";
@@ -98,7 +103,7 @@ function render(){
   const q=view.q,filtering=view.who||view.st||q;
   const qa=[],qok=all.map(r=>{qa[r.level]=!q||r.name.toLowerCase().includes(q);return qa.slice(0,r.level+1).some(Boolean)}); // search: its own name, or a parent's (a ticket is found with everything under it)
   const match=r=>(!view.who||r.assignees.includes(view.who))&&(!view.st||r.st===view.st)&&qok[r.idx];
-  const visible=new Array(all.length).fill(true),leaf=list&&view.leaf; // leaf = 一覧「成果物のみ」: top-level folders and the tagged tasks (deliverables) one step in under them
+  const visible=new Array(all.length).fill(true),leaf=view.leaf; // leaf = 「成果物のみ」 (一覧 and the chart): top-level folders and the tagged tasks (deliverables) one step in under them
   if(filtering){
     for(let i=all.length-1;i>=0;i--){
       const r=all[i];
@@ -114,21 +119,21 @@ function render(){
     if(leaf&&(r.parent?r.level:!r.deliverable))return; // 成果物のみ: parents between the top folder and the task are left out (named in the tooltip), so their folding doesn't count; so are untagged tasks
     if(r.parent&&collapsed.has(r.id))hideBelow=r.level;
     if(!visible[i])return;
-    const s=D(r.start),e=D(r.end),x=X(s),w=(e-s+1)*dw,bd=biz(s,e);
+    const s=D(r.start),e=D(r.end),h0=hs(r),h1=he(r),x=XH(h0),w=(h1-h0+1)*dw/2,bd=bizH(h0,h1);
     // a lower parent, unfolded: a low heading row (.row.slim, 22px in tempo.css) without a summary bar or dates — its tasks are right below and its progress
     // in the table; many of these bars made the chart hard to read. Folded, the bar is all the chart shows of the group, so the full row is back
     const slim=r.parent&&r.level&&!collapsed.has(r.id),rh=slim?22:RH;
-    const who=r.assignees.join("、"),id=esc(r.id);if(!slim)geo[r.id]={i:vis.length,s,e,y:rowY+rh/2};rowY+=rh;vis.push(r.id); // y: the row's middle, for the link arrows; a low row has no bar for an arrow to end at (a link kept from before the task got sub-tasks)
+    const who=r.assignees.join("、"),id=esc(r.id);if(!slim)geo[r.id]={i:vis.length,h0,h1,y:rowY+rh/2};rowY+=rh;vis.push(r.id); // y: the row's middle, for the link arrows; a low row has no bar for an arrow to end at (a link kept from before the task got sub-tasks)
     let mark;
     if(slim)mark="";
     else if(r.milestone&&!r.parent){
-      mark=`<div class="ms st-${r.st}" data-bar="${id}" style="left:${X(e)+dw/2-7}px" title="${esc(r.name)}"></div><span class="who" style="left:${X(e)+dw/2+12}px">${lab(r,s,e)}</span>`;
+      mark=`<div class="ms st-${r.st}" data-bar="${id}" style="left:${X(e)+dw/2-7}px" title="${esc(r.name)}"></div><span class="who" style="left:${X(e)+dw/2+12}px">${lab(r,h0,h1)}</span>`;
     }else{
       const urg=!r.parent&&r.st!=="done"&&r.st!=="over";
-      mark=`<div class="bar st-${r.st}${r.parent?" sum":""}${urg?" urg dl"+delay(r):""}" data-bar="${id}" style="left:${x}px;width:${w}px" title="${esc(r.name)}｜${md(s)}〜${md(e)}｜${r.progress}%｜${ST[r.st]}"><div class="fill" style="width:${r.progress}%"></div>${!r.parent&&w>50?`<span class="bl">${esc(r.name)}</span>`:""}${r.parent?"":`<i class="h l"></i><i class="h r"></i>`}</div><span class="who" style="left:${x+w+6}px">${lab(r,s,e)}</span>`;
+      mark=`<div class="bar st-${r.st}${r.parent?" sum":""}${urg?" urg dl"+delay(r):""}" data-bar="${id}" style="left:${x}px;width:${w}px" title="${esc(r.name)}｜${md(s)}${h0&1?"午後":""}〜${md(e)}${h1&1?"":"午前"}｜${r.progress}%｜${ST[r.st]}"><div class="fill" style="width:${r.progress}%"></div>${offSegs(h0,h1,dw)}${!r.parent&&w>50?`<span class="bl">${esc(r.name)}</span>`:""}${r.parent?"":`<i class="h l"></i><i class="h r"></i>`}</div><span class="who" style="left:${x+w+6}px">${lab(r,h0,h1)}</span>`;
     }
     rowsHtml+=`<div class="row${r.parent?" parent":""}${r.parent?" pc":""}${slim?" slim":""}${r.id===editingId||sel.has(r.id)?" sel":""}"${r.parent?` style="--pc:${parColor(r)}"`:""} data-id="${id}">
-      <div class="lc" data-open="${id}"><div class="c-name" style="padding-left:${6+(leaf?(r.level?1:0):r.level)*18}px">${r.parent?`<button type="button" class="tg" data-tg="${id}" aria-label="折りたたみ" aria-expanded="${!collapsed.has(r.id)}">${r.level?(collapsed.has(r.id)?"▸":"▾"):folder(!collapsed.has(r.id))}</button>`:`<span class="dot st-${r.st}${r.deliverable?" dv":""}" title="${ST[r.st]}${r.deliverable?"・成果物":""}"></span>`}<span class="tn"${leaf&&r.level>1?` title="${esc(pa.slice(1,r.level).join(" › "))}"`:""}>${esc(r.name)}</span></div><div class="c-as">${r.parent||readOnly?esc(who):`<button type="button" class="asbox${who?"":" none"}" data-as="${id}" aria-label="担当者を選ぶ" title="${esc(who)}"><span>${esc(who)||"担当なし"}</span><b aria-hidden="true">${who?"▾":"＋"}</b></button>`}</div><div class="c-d">${slim?"":md(s)}</div><div class="c-d">${slim?"":md(e)}</div><div class="c-n">${bd}</div><div class="c-p">${r.progress}%</div><div class="c-id">${id}</div><div class="c-st">${ST[r.st]}</div><div class="c-done">${list?doneCell(all,r,leaf):""}</div></div>
+      <div class="lc" data-open="${id}"><div class="c-name" style="padding-left:${6+(leaf?(r.level?1:0):r.level)*18}px">${r.parent?`<button type="button" class="tg" data-tg="${id}" aria-label="折りたたみ" aria-expanded="${!collapsed.has(r.id)}">${r.level?(collapsed.has(r.id)?"▸":"▾"):folder(!collapsed.has(r.id))}</button>`:`<span class="dot st-${r.st}${r.deliverable?" dv":""}" title="${ST[r.st]}${r.deliverable?"・成果物":""}"></span>`}<span class="tn"${leaf&&r.level>1?` title="${esc(pa.slice(1,r.level).join(" › "))}"`:""}>${esc(r.name)}</span></div><div class="c-as">${r.parent||readOnly?esc(who):`<button type="button" class="asbox${who?"":" none"}" data-as="${id}" aria-label="担当者を選ぶ" title="${esc(who)}"><span>${esc(who)||"担当なし"}</span><b aria-hidden="true">${who?"▾":"＋"}</b></button>`}</div><div class="c-d">${slim?"":dS(h0)}</div><div class="c-d">${slim?"":dE(h1)}</div><div class="c-n">${bd}</div><div class="c-p">${r.progress}%</div><div class="c-id">${id}</div><div class="c-st">${ST[r.st]}</div><div class="c-done">${list?doneCell(all,r,leaf):""}</div></div>
       <div class="tl">${mark}</div></div>`;
   });
   if(!readOnly)rowsHtml+=`<div class="row addrow"><div class="lc" data-act="add"><div class="c-name" style="padding-left:12px">＋ タスクを追加</div></div><div class="tl"></div></div>`;
@@ -136,8 +141,8 @@ function render(){
   visOrder=vis;
   let lk="";const H0=75;
   all.forEach(r=>(r.deps||[]).forEach(pid=>{const A=geo[pid],B=geo[r.id];if(!A||!B)return;
-    const x1=X(A.e+1),x2=X(B.s),up=B.i<A.i,y1=H0+A.y+(up?-10:10),y2=H0+B.y,xv=Math.min(x1-6,x2-10);
-    lk+=`<path class="${B.s<=A.e?"bad":""}" d="M${xv} ${y1}V${y2}H${x2-1}" marker-end="url(#lk-arrow)"/>`;}));
+    const x1=XH(A.h1+1),x2=XH(B.h0),up=B.i<A.i,y1=H0+A.y+(up?-10:10),y2=H0+B.y,xv=Math.min(x1-6,x2-10);
+    lk+=`<path class="${B.h0<=A.h1?"bad":""}" d="M${xv} ${y1}V${y2}H${x2-1}" marker-end="url(#lk-arrow)"/>`;}));
   const linksSvg=lk?`<svg class="links" width="${tw}" height="${H0+rowY+RH}"><defs><marker id="lk-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--ink2)" stroke="none"/></marker></defs>${lk}</svg>`:"";
   const sl=chart.scrollLeft,st=chart.scrollTop;
   chart.classList.toggle("list",list); // 一覧: the same table without the timeline (tempo.css)

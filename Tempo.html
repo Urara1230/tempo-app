@@ -14,7 +14,7 @@
 
 <div class="app">
   <div class="topbar">
-    <div class="brand"><i aria-hidden="true"><b></b><b style="--n:1"></b><b style="--n:2"></b></i><span role="img" aria-label="Tempo"><b style="--n:3">T</b><b style="--n:4">e</b><b style="--n:5">m</b><b style="--n:6">p</b><b style="--n:7">o</b></span><small class="ver">v0.0.8</small></div>
+    <div class="brand"><i aria-hidden="true"><b></b><b style="--n:1"></b><b style="--n:2"></b></i><span role="img" aria-label="Tempo"><b style="--n:3">T</b><b style="--n:4">e</b><b style="--n:5">m</b><b style="--n:6">p</b><b style="--n:7">o</b></span><small class="ver">v0.0.9</small></div>
     <select id="projSel" aria-label="プロジェクト"></select>
     <span class="spacer"></span>
     <span class="mode" id="modeLbl"></span>
@@ -25,7 +25,7 @@
     <div class="seg" role="group" aria-label="表示">
       <button type="button" data-view="gantt">ガント</button><button type="button" data-view="list" title="一覧：タイムラインなしで、タスクと成果物を ID・担当・状況・完了で一覧表示">一覧</button>
     </div>
-    <button type="button" class="sw" id="leafBtn" title="一覧で、いちばん上の親タスク（フォルダ）と成果物のタグが付いたタスクだけを表示。間の親タスクは成果物の名前にマウスを置くと分かります">成果物のみ</button>
+    <button type="button" class="sw" id="leafBtn" title="いちばん上の親タスク（フォルダ）と成果物のタグが付いたタスクだけを表示（ガント・一覧とも）。間の親タスクは成果物の名前にマウスを置くと分かります">成果物のみ</button>
     <div class="stats" id="stats"></div>
     <span class="spacer"></span>
     <label class="q"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg><input type="search" id="qIn" placeholder="このプロジェクトを検索" aria-label="タスク名で検索" autocomplete="off"></label>
@@ -78,7 +78,7 @@
     <label>タスク名<input id="f-name" required autocomplete="off"></label>
     <label>担当者（「、」か「,」で区切る）<input id="f-as" list="members" autocomplete="off"></label>
     <div class="mem" id="f-mem" aria-label="メンバーから選ぶ"></div>
-    <div class="two"><label>開始日<input type="date" id="f-s" max="9999-12-31"></label><label>終了日<input type="date" id="f-e" max="9999-12-31"></label></div>
+    <div class="two"><label>開始日<input type="date" id="f-s" max="9999-12-31"><select id="f-sh" aria-label="開始日の午前・午後"><option value="am">午前から</option><option value="pm">午後から</option></select></label><label>終了日<input type="date" id="f-e" max="9999-12-31"><select id="f-eh" aria-label="終了日の午前・午後"><option value="pm">午後まで</option><option value="am">午前まで</option></select></label></div>
     <div class="hint" id="f-biz"></div>
     <label>進捗 <output id="f-po">0%</output><input type="range" id="f-p" min="0" max="100" step="5"></label>
     <label class="chk"><input type="checkbox" id="f-ms">マイルストーン（◆で表示）</label>

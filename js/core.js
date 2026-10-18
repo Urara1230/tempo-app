@@ -17,6 +17,11 @@ const coHol=n=>{const h=projects[curId]?.holidays;
   return coMap.get(S(n))};
 const isOff=n=>{const w=dow(n);return w===0||w===6||isHol(n)||!!coHol(n)};
 function biz(a,b){let c=0;for(let n=a;n<=b;n++)if(!isOff(n))c++;return c}
+// half days (v0.0.9): day n's morning is slot 2n, its afternoon 2n+1. A task runs from slot hs to slot he (both in); startPM / endAM are stored only when true,
+// so a task without them is whole days as before. At least half a day: an afternoon start with a morning end on the same day counts as that afternoon
+const hs=t=>2*D(t.start)+(t.startPM?1:0),he=t=>Math.max(hs(t),2*D(t.end)+(t.endAM?0:1));
+function setH(t,a,b){t.start=S(a>>1);t.end=S(b>>1);if(a&1)t.startPM=true;else delete t.startPM;if(b&1)delete t.endAM;else t.endAM=true}
+function bizH(a,b){let c=0;for(let h=a;h<=b;h++)if(!isOff(h>>1))c++;return c/2} // workdays from slot a to slot b: a half day is 0.5
 const today=()=>{const t=new Date();return Math.round(Date.UTC(t.getFullYear(),t.getMonth(),t.getDate())/DAY)};
 let TODAY=today();
 const busy=()=>dragging||!!document.querySelector("#chart .rn"); // a bar is being dragged or a name typed: a redraw now would cut it short — the drop / the end of the rename redraws
@@ -49,9 +54,9 @@ let sel=new Set(), lastSel=null, clip=null, delArmed=false, lkArmed=false, lkWas
 let chain=Promise.resolve();
 
 // share of the task's own workdays already past (to yesterday), 0–1
-function elapsed(t){const s=D(t.start),e=D(t.end);return TODAY<s?0:Math.min(1,biz(s,TODAY-1)/Math.max(1,biz(s,e)))}
+function elapsed(t){return TODAY<D(t.start)?0:Math.min(1,bizH(hs(t),2*TODAY-1)/Math.max(.5,bizH(hs(t),he(t))))}
 // Brabio GetDelayLevel: 0 = on schedule, 1–4 = how far progress lags time (in workdays)
-function delay(t){const s=D(t.start),tot=Math.max(1,biz(s,D(t.end))),lag=biz(s,TODAY)-(t.progress||0)/100*tot;
+function delay(t){const tot=Math.max(.5,bizH(hs(t),he(t))),lag=bizH(hs(t),2*TODAY+1)-(t.progress||0)/100*tot;
   return lag<=0?0:lag<1?1:Math.min(Math.ceil((lag-1)/tot*4)+1,4)}
 function status(t){
   if((t.progress||0)>=100)return"done";
@@ -69,8 +74,8 @@ function derive(p){
     for(let j=i+1;j<rows.length&&rows[j].level>r.level;j++)if(rows[j].level===r.level+1)kids.push(rows[j]);
     if(kids.length){
       r.parent=true;
-      r.start=S(Math.min(...kids.map(k=>D(k.start))));r.end=S(Math.max(...kids.map(k=>D(k.end))));
-      let w=0,sum=0;kids.forEach(k=>{const b=Math.max(1,biz(D(k.start),D(k.end)));w+=b;sum+=b*k.progress});
+      setH(r,Math.min(...kids.map(hs)),Math.max(...kids.map(he))); // the earliest start and latest end, half days too
+      let w=0,sum=0;kids.forEach(k=>{const b=Math.max(.5,bizH(hs(k),he(k)));w+=b;sum+=b*k.progress});
       r.progress=Math.round(sum/w);
       r.assignees=[...new Set(kids.flatMap(k=>k.assignees))];
     }
@@ -81,14 +86,14 @@ function derive(p){
 // whole project: leaf tasks, workday-weighted progress, first start / last end (day numbers)
 function overall(p){
   const rows=derive(p).filter(r=>!r.parent);let w=0,sum=0,mn=Infinity,mx=-Infinity;
-  rows.forEach(r=>{const s=D(r.start),e=D(r.end),b=Math.max(1,biz(s,e));w+=b;sum+=b*r.progress;mn=Math.min(mn,s);mx=Math.max(mx,e)});
+  rows.forEach(r=>{const s=D(r.start),e=D(r.end),b=Math.max(.5,bizH(hs(r),he(r)));w+=b;sum+=b*r.progress;mn=Math.min(mn,s);mx=Math.max(mx,e)});
   return{rows,pct:w?Math.round(sum/w):0,mn,mx};
 }
-// label right of the bar: "2/28 (土)　0%　18営業日　担当"
-function lab(r,s,e){const who=esc((r.assignees||[]).join("、")),d=`${md(e)} (${WD[dow(e)]})`,pr=+r.progress||0;
+// label right of the bar: "2/28 (土)　0%　18営業日　担当" ("2/28 (土) 午前まで　…　2.5営業日" with half days); a, b = the half-day slots it runs over
+function lab(r,a,b){const who=esc((r.assignees||[]).join("、")),e=b>>1,d=`${md(e)} (${WD[dow(e)]})`,pr=+r.progress||0;
   if(r.milestone&&!r.parent)return`${d}　${esc(r.name)}${who?"　"+who:""}`;
   const pg=r.parent||readOnly?`${pr}%`:`<button type="button" class="pg" data-pg="${esc(r.id)}" title="ダブルクリックで進捗を変更">${pr}%</button>`;
-  return`${d}　${pg}　${biz(s,e)}営業日${who?"　"+who:""}`}
+  return`${d}${b&1?"":" 午前まで"}　${pg}　${bizH(a,b)}営業日${who?"　"+who:""}`}
 function members(p){return [...new Set([...(p.members||[]),...(p.tasks||[]).flatMap(t=>t.assignees||[])])]}
 const roster=p=>p.members||members(p); // until a roster is saved, start from names used in tasks
 const names=v=>v.split(/[、,，\n]/).map(s=>s.trim()).filter(Boolean);
@@ -101,8 +106,9 @@ function applyLinks(p){
   let moved=0;const byId={};p.tasks.forEach(t=>byId[t.id]=t);
   p.tasks.forEach(t=>{if(t.deps)t.deps=t.deps.filter(id=>byId[id]&&!reach(byId,id,t.id))}); // links to deleted tasks, to itself, or closing a loop
   for(let pass=0;pass<p.tasks.length+1;pass++){let ch=false;
-    p.tasks.forEach(t=>(t.deps||[]).forEach(pid=>{const a=byId[pid];if(!a)return;const ae=D(a.end);if(D(t.start)>ae)return;
-      let ns=ae+1;while(isOff(ns))ns++;const dur=Math.max(1,biz(D(t.start),D(t.end)));let ne=ns,c=1;while(c<dur){ne++;if(!isOff(ne))c++}t.start=S(ns);t.end=S(ne);ch=true;moved++;}));
+    // in half days: a task ending in the morning lets the next one start that afternoon; the next one keeps its workdays (a task on days off only: one day, as before)
+    p.tasks.forEach(t=>(t.deps||[]).forEach(pid=>{const a=byId[pid];if(!a)return;const ae=he(a);if(hs(t)>ae)return;
+      let ns=ae+1;while(isOff(ns>>1))ns++;const dur=2*bizH(hs(t),he(t))||2;let ne=ns,c=1;while(c<dur){ne++;if(!isOff(ne>>1))c++}setH(t,ns,ne);ch=true;moved++;}));
     if(!ch)break}
   return moved;
 }

@@ -14,13 +14,13 @@ function openTask(id){
   editingId=id;armReset();
   drawer.hidden=false;$("projForm").hidden=true;$("taskForm").hidden=false;setTgl();
   parOpts(all,r);FF.forEach(([k,get])=>fset(k,get(r,all)));formInit=Object.fromEntries(FF.map(([k])=>[k,fval(k)]));
-  ["f-s","f-e","f-p","f-ms","f-dv"].forEach(k=>$(k).disabled=!!r.parent||readOnly);$("f-pa").disabled=readOnly;
+  ["f-s","f-sh","f-e","f-eh","f-p","f-ms","f-dv"].forEach(k=>$(k).disabled=!!r.parent||readOnly);$("f-pa").disabled=readOnly;
   formExtras(r);
   render();
 }
 /* task form fields; while the form is open, fields the user has not touched follow changes made elsewhere
    (right-click rename, 担当 box, progress slider…), so 保存 never writes stale values back */
-const FF=[["f-pa",(r,all)=>parId(all,r)],["f-name",r=>r.name],["f-as",r=>r.assignees.join("、")],["f-s",r=>r.start],["f-e",r=>r.end],["f-p",r=>String(r.progress)],["f-ms",r=>!!r.milestone],["f-dv",r=>!!r.deliverable],["f-memo",r=>r.memo||""]];
+const FF=[["f-pa",(r,all)=>parId(all,r)],["f-name",r=>r.name],["f-as",r=>r.assignees.join("、")],["f-s",r=>r.start],["f-sh",r=>r.startPM?"pm":"am"],["f-e",r=>r.end],["f-eh",r=>r.endAM?"am":"pm"],["f-p",r=>String(r.progress)],["f-ms",r=>!!r.milestone],["f-dv",r=>!!r.deliverable],["f-memo",r=>r.memo||""]];
 const fval=k=>$(k).type==="checkbox"?$(k).checked:$(k).value;
 const fset=(k,v)=>{if($(k).type==="checkbox")$(k).checked=v;else $(k).value=v};
 let formInit={};
@@ -40,7 +40,8 @@ function syncForm(){
   let ch=false;FF.forEach(([k,get])=>{const v=get(r,all);if(fval(k)===formInit[k]&&v!==formInit[k]){fset(k,v);formInit[k]=v;ch=true}});
   if(ch)formExtras(r);
 }
-function bizHint(){const s=$("f-s").value,e=$("f-e").value;if(!s||!e)return"";if(e<s)return"終了日が開始日より前です";return`${biz(D(s),D(e))} 営業日（土日祝・会社の休日を除く）`}
+const formH=(s,e)=>{const a=2*D(s)+($("f-sh").value==="pm"?1:0);return[a,Math.max(a,2*D(e)+($("f-eh").value==="am"?0:1))]}; // the panel's dates as half-day slots: an afternoon start with a morning end on one day = that afternoon
+function bizHint(){const s=$("f-s").value,e=$("f-e").value;if(!s||!e)return"";if(e<s)return"終了日が開始日より前です";return`${bizH(...formH(s,e))} 営業日（土日祝・会社の休日を除く）`}
 function openProject(){
   const p=projects[curId];armReset();
   drawer.hidden=false;$("taskForm").hidden=true;$("projForm").hidden=false;setTgl();
@@ -48,7 +49,7 @@ function openProject(){
   bkInfo();shInfo();if(!p)return;$("p-name").value=p.name||"";$("p-json").value=JSON.stringify({name:p.name,members:roster(p),tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[]},null,1);rosterChips();
 }
 $("f-s").addEventListener("input",()=>{if($("f-e").value<$("f-s").value)$("f-e").value=$("f-s").value;$("f-biz").textContent=bizHint()});
-$("f-e").addEventListener("input",()=>$("f-biz").textContent=bizHint());
+["f-e","f-sh","f-eh"].forEach(k=>$(k).addEventListener("input",()=>$("f-biz").textContent=bizHint()));
 $("f-p").addEventListener("input",()=>$("f-po").textContent=$("f-p").value+"%");
 /* member roster: kept per project, picked from in the task form */
 function memChips(){const p=projects[curId],cur=names($("f-as").value);
@@ -68,7 +69,7 @@ $("taskForm").addEventListener("submit",e=>{
   e.preventDefault();const p=projects[curId];const t=p&&p.tasks.find(x=>x.id===editingId);if(!t||readOnly)return;
   t.name=$("f-name").value.trim()||"無題";
   t.assignees=names($("f-as").value);
-  if(!$("f-s").disabled){let s=$("f-s").value||t.start,en=$("f-e").value||t.end;if(en<s)en=s;t.start=s;t.end=en;t.progress=+$("f-p").value;t.milestone=$("f-ms").checked;setDv(t,$("f-dv").checked)}
+  if(!$("f-s").disabled){let s=$("f-s").value||t.start,en=$("f-e").value||t.end;if(en<s)en=s;setH(t,...formH(s,en));t.progress=+$("f-p").value;t.milestone=$("f-ms").checked;setDv(t,$("f-dv").checked)}
   t.memo=$("f-memo").value;
   // 親 changed: move under it (after its children); （なし） = top level, right after the top-level task it was under. moveBlock saves — one undo step with the fields
   const pa=$("f-pa").value,top=()=>{const ts=p.tasks;let i=ts.indexOf(t);while(ts[i].level>0)i--;return ts[i].id};
@@ -84,7 +85,7 @@ $("p-copy").addEventListener("click",()=>{const v=$("p-json").value;navigator.cl
 /* replace the current project's tasks (and milestones / members / name when given); shared by JSON and Excel import */
 function replaceData(d){
   const p=projects[curId];if(!p||readOnly)return;const tasks=Array.isArray(d)?d:d.tasks;if(!Array.isArray(tasks))throw 0;
-  p.tasks=tasks.filter(t=>t&&t.name&&isDay(t.start)&&isDay(t.end)).map(t=>({id:t.id?String(t.id):uid(),name:String(t.name),start:t.start,end:t.end,progress:Math.max(0,Math.min(100,+t.progress||0)),assignees:Array.isArray(t.assignees)?t.assignees.map(String):[],level:+t.level||0,milestone:!!t.milestone,memo:t.memo||"",deps:Array.isArray(t.deps)?t.deps.map(String):[],...(isHex(t.color)?{color:t.color}:{}),...(t.deliverable?{deliverable:true}:{})}));
+  p.tasks=tasks.filter(t=>t&&t.name&&isDay(t.start)&&isDay(t.end)).map(t=>({id:t.id?String(t.id):uid(),name:String(t.name),start:t.start,end:t.end,progress:Math.max(0,Math.min(100,+t.progress||0)),assignees:Array.isArray(t.assignees)?t.assignees.map(String):[],level:+t.level||0,milestone:!!t.milestone,memo:t.memo||"",deps:Array.isArray(t.deps)?t.deps.map(String):[],...(isHex(t.color)?{color:t.color}:{}),...(t.deliverable?{deliverable:true}:{}),...(t.startPM?{startPM:true}:{}),...(t.endAM?{endAM:true}:{})}));
   if(Array.isArray(d.milestones))p.milestones=d.milestones.filter(m=>m&&isDay(m.date)).map(m=>({id:m.id||uid(),date:m.date,title:String(m.title||""),color:MSC.includes(m.color)?m.color:"blue"}));
   if(Array.isArray(d.members))p.members=d.members.map(String);
   if(Array.isArray(d.holidays))p.holidays=d.holidays.filter(h=>h&&isDay(h.date)).map(h=>({date:h.date,color:isHex(h.color)?h.color:HOLC}));
@@ -97,7 +98,7 @@ $("p-import").addEventListener("click",()=>{
 /* Excel in Brabio's export layout: rows 1–2 title / period, row 3 headers A–Q, data from row 5 — project row, milestones, then folders / tasks.
    Brabio's day-by-day chart (column R on) is not written. Columns R–T here are Tempo's own ◆ flag, parent color and deliverable tag (○), which Brabio has no field for.
    Import finds columns by header name, so Brabio's own exports load too. */
-const XCOL=["タイプ","アウトライン","ID","タイトル","開始日","〆切日","ステータス","進捗率","状況","完了日","メンバー","内容","完了メンバー","完了メンバーID","メンバーID","リンクID","固定リンクID","マイルストーン","色","成果物"];
+const XCOL=["タイプ","アウトライン","ID","タイトル","開始日","〆切日","ステータス","進捗率","状況","完了日","メンバー","内容","完了メンバー","完了メンバーID","メンバーID","リンクID","固定リンクID","マイルストーン","色","成果物","午後開始","午前終了"];
 const xnow=()=>{const[y,m,d,h,mi]=bkStamp().split(/[-_]/);return`${y}年${m}月${d}日 ${h}時${mi}分`}; // when the sheet was written
 function toXlsx(p){
   const{pct,mn,mx}=overall(p),has=isFinite(mn),ps=has?S(mn):"",pe=has?S(mx):"";
@@ -106,8 +107,8 @@ function toXlsx(p){
     ["project",0,p.id,p.name||"",day(ps),day(pe),"",pct,has?ST[status({start:ps,end:pe,progress:pct})]:"","",roster(p).join("\n")],
     ...[...(p.milestones||[])].sort((a,b)=>a.date<b.date?-1:1).map(m=>["milestone",1,"",m.title,day(m.date),day(m.date),"","","","","",m.color||"blue"]),
     ...derive(p).map(r=>[r.parent?"folder":"task",r.level+1,r.id,r.name,day(r.start),day(r.end),r.progress>=100?"完了":r.progress>0?"作業中":"未着手",r.progress,ST[r.st],"",
-      r.parent?"":r.assignees.join("\n"),r.memo||"","","","",(r.deps||[]).join("\n"),"",r.milestone?"◆":"",isHex(r.color)?r.color:"",r.deliverable?"○":""])],
-    {widths:[9,6,12,36,11,11,9,7,9,11,16,30,12,12,12,12,12,8,9,8],head:2,freeze:4});
+      r.parent?"":r.assignees.join("\n"),r.memo||"","","","",(r.deps||[]).join("\n"),"",r.milestone?"◆":"",isHex(r.color)?r.color:"",r.deliverable?"○":"",r.startPM?"○":"",r.endAM?"○":""])],
+    {widths:[9,6,12,36,11,11,9,7,9,11,16,30,12,12,12,12,12,8,9,8,8,8],head:2,freeze:4});
 }
 const xdate=v=>{if(typeof v==="number")return S(Math.floor(v)-XL_EPOCH);const m=/^(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})/.exec(String(v??"").trim());return m?`${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`:""};
 async function fromXlsx(buf){
@@ -118,7 +119,7 @@ async function fromXlsx(buf){
     if(type==="project"){if(s("タイトル"))d.name=s("タイトル");const m=names(s("メンバー"));if(m.length)d.members=m}
     else if(type==="milestone")d.milestones.push({date:xdate(g("開始日"))||xdate(g("〆切日")),title:s("タイトル"),color:s("内容")});
     else if(type||s("タイトル"))d.tasks.push({id:s("ID"),name:s("タイトル"),level:Math.max(0,Math.min(3,(+g("アウトライン")||1)-1)),start:xdate(g("開始日")),end:xdate(g("〆切日")),
-      progress:Math.round(parseFloat(g("進捗率"))||0),assignees:names(s("メンバー")),milestone:/^(◆|1|true)$/i.test(s("マイルストーン")),deliverable:/^(○|〇|1|true)$/i.test(s("成果物")),color:s("色"),memo:String(g("内容")),
+      progress:Math.round(parseFloat(g("進捗率"))||0),assignees:names(s("メンバー")),milestone:/^(◆|1|true)$/i.test(s("マイルストーン")),deliverable:/^(○|〇|1|true)$/i.test(s("成果物")),startPM:/^(○|〇|1|true)$/i.test(s("午後開始")),endAM:/^(○|〇|1|true)$/i.test(s("午前終了")),color:s("色"),memo:String(g("内容")),
       deps:(s("リンクID")+" "+s("固定リンクID")).split(/[\s,、]+/).filter(Boolean)}); // 固定リンク (red, fixed gap) loads as a normal link
   });
   return d;
@@ -127,7 +128,7 @@ async function fromXlsx(buf){
 function toListXlsx(p){const day=s=>s?{date:s}:"";
   return xlsxBlob([[p.name||""],[`${xnow()}　※閲覧用（Tempo には読み込めません）`],
     ["ID","タイトル","担当","開始日","〆切日","営業日","進捗率","状況"],
-    ...derive(p).map(r=>[r.id,"　".repeat(r.level)+r.name,r.assignees.join("、"),day(r.start),day(r.end),biz(D(r.start),D(r.end)),r.progress,ST[r.st]])],
+    ...derive(p).map(r=>[r.id,"　".repeat(r.level)+r.name,r.assignees.join("、"),day(r.start),day(r.end),bizH(hs(r),he(r)),r.progress,ST[r.st]])],
     {widths:[13,52,16,11,11,7,7,9],head:2});
 }
 function xdl(blob,p,tag){const{mn,mx}=overall(p),a=document.createElement("a");a.href=URL.createObjectURL(blob);
@@ -214,7 +215,7 @@ $("projSet").addEventListener("click",()=>$("projForm").hidden?openProject():clo
 $("meSel").addEventListener("change",e=>{me=e.target.value;ls.set("mg.me",me);render()});
 $("whoSel").addEventListener("change",e=>{view.who=e.target.value;render()});
 document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>{view.list=b.dataset.view==="list";ls.set("mg.view",view.list?"list":"gantt");render()}));
-$("leafBtn").addEventListener("click",()=>{view.leaf=!view.leaf;ls.set("mg.leaf",view.leaf?"1":"");render()}); // 一覧: only the top folders and the tagged tasks (deliverables)
+$("leafBtn").addEventListener("click",()=>{view.leaf=!view.leaf;ls.set("mg.leaf",view.leaf?"1":"");render()}); // only the top folders and the tagged tasks (deliverables), in 一覧 and the chart
 $("todayBtn").addEventListener("click",scrollToToday);
 document.querySelectorAll("[data-scale]").forEach(b=>b.addEventListener("click",()=>{view.scale=b.dataset.scale;ls.set("mg.scale",view.scale);render()}));
 $("qIn").addEventListener("input",e=>{view.q=e.target.value.trim().toLowerCase();render()}); // search this project by task name
@@ -344,7 +345,7 @@ function openBulk(id){const p=projects[curId],r=p&&derive(p).find(x=>x.id===id);
 function closeBulk(){bulkPop.hidden=true;bulkId=null}
 bulkPop.addEventListener("submit",e=>{e.preventDefault();const p=projects[curId],ts=p&&p.tasks,i=ts?ts.findIndex(t=>t.id===bulkId):-1;if(i<0||readOnly)return closeBulk();
   const r=derive(p)[i],add=$("bulkIn").value.split("\n").map(s=>s.trim()).filter(Boolean);if(!add.length)return;
-  ts.splice(blockEnd(ts,i)+1,0,...add.map(name=>({id:uid(),name,start:r.start,end:r.end,progress:0,assignees:[...r.assignees],level:r.level+1,...($("bulkDv").checked?{deliverable:true}:{})})));
+  ts.splice(blockEnd(ts,i)+1,0,...add.map(name=>({id:uid(),name,start:r.start,end:r.end,...(r.startPM?{startPM:true}:{}),...(r.endAM?{endAM:true}:{}),progress:0,assignees:[...r.assignees],level:r.level+1,...($("bulkDv").checked?{deliverable:true}:{})})));
   collapsed.delete(bulkId);closeBulk();save(p);toast(`${add.length} 件の子タスクを追加しました`)});
 $("bulkCancel").addEventListener("click",closeBulk);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!bulkPop.hidden)closeBulk()});
@@ -385,7 +386,7 @@ chart.addEventListener("pointerdown",e=>{const o=e.target.closest(".lc[data-open
 document.addEventListener("pointermove",e=>{if(!rd)return; // 成果物のみ: never "in" a row — it would become a hidden parent and vanish
   if(!rd.on){if(Math.hypot(e.clientX-rd.x,e.clientY-rd.y)>5){clearTimeout(rd.t);rd=null}return}
   clearDrop();rd.to=null;const row=document.elementFromPoint(e.clientX,e.clientY)?.closest(".row[data-id]");if(!row||rd.moving.has(row.dataset.id))return;
-  const b=row.getBoundingClientRect(),f=(e.clientY-b.top)/b.height;rd.to={id:row.dataset.id,w:view.list&&view.leaf?(f<.5?"before":"after"):f<.3?"before":f>.7?"after":"in"};row.classList.add("drop-"+rd.to.w)});
+  const b=row.getBoundingClientRect(),f=(e.clientY-b.top)/b.height;rd.to={id:row.dataset.id,w:leafView()?(f<.5?"before":"after"):f<.3?"before":f>.7?"after":"in"};row.classList.add("drop-"+rd.to.w)});
 function endRowDrag(e){if(!rd)return;const d=rd;rd=null;clearTimeout(d.t);if(!d.on)return;
   document.body.classList.remove("rowdrag");clearDrop();noClick=true;setTimeout(()=>noClick=false);
   if(d.to&&e.type==="pointerup")moveBlock(projects[curId],d.tops,d.to.id,d.to.w);else render()}
@@ -411,30 +412,30 @@ chart.addEventListener("pointerdown",e=>{
   let ts=[t];
   if(m==="m"&&sel.has(t.id)&&sel.size>1){const leaf=new Set(derive(p).filter(x=>!x.parent).map(x=>x.id));
     ts=topBlocks(p).flatMap(i=>p.tasks.slice(i,blockEnd(p.tasks,i)+1)).filter(x=>leaf.has(x.id))}
-  drag={el,t,m,x0:e.clientX,moved:false,items:ts.map(x=>({t:x,s0:D(x.start),e0:D(x.end)}))};
+  drag={el,t,m,x0:e.clientX,moved:false,items:ts.map(x=>({t:x,s0:hs(x),e0:he(x)}))}; // in half-day slots
   el.setPointerCapture(e.pointerId);e.preventDefault();
 });
-function paintBar(t,s,en){ // live position of one bar (and its label / date cells) while dragging
+function paintBar(t,s,en){ // live position of one bar (and its label / date cells) while dragging; s, en = half-day slots
   const el=document.querySelector(`#chart [data-bar="${CSS.escape(t.id)}"]`);if(!el)return; // inside a collapsed parent
-  el.classList.add("dragging");const row=el.closest(".row"),X=n=>(n-range.a)*range.dw;
-  if(el.classList.contains("ms"))el.style.left=(X(en)+range.dw/2-7)+"px";
-  else{el.style.left=X(s)+"px";el.style.width=((en-s+1)*range.dw)+"px"}
-  const w=row.querySelector(".who");if(w){w.innerHTML=lab(t,s,en);w.style.left=(el.classList.contains("ms")?X(en)+range.dw/2+12:X(en+1)+6)+"px"}
-  const ds=row.querySelectorAll(".lc .c-d");ds[0].textContent=md(s);ds[1].textContent=md(en);row.querySelector(".lc .c-n").textContent=biz(s,en);
+  el.classList.add("dragging");const row=el.closest(".row"),dw=range.dw,X=h=>(h/2-range.a)*dw;
+  if(el.classList.contains("ms"))el.style.left=(X(en&~1)+dw/2-7)+"px";
+  else{el.style.left=X(s)+"px";el.style.width=((en-s+1)*dw/2)+"px";el.querySelectorAll(".offd").forEach(o=>o.remove());el.querySelector(".fill").insertAdjacentHTML("afterend",offSegs(s,en,dw))} // the days off under it change as it moves
+  const w=row.querySelector(".who");if(w){w.innerHTML=lab(t,s,en);w.style.left=(el.classList.contains("ms")?X(en&~1)+dw/2+12:X(en+1)+6)+"px"}
+  const ds=row.querySelectorAll(".lc .c-d");ds[0].innerHTML=dS(s);ds[1].innerHTML=dE(en);row.querySelector(".lc .c-n").textContent=bizH(s,en);
 }
 chart.addEventListener("pointermove",e=>{
   if(!drag||!drag.el)return;
-  const dd=Math.round((e.clientX-drag.x0)/range.dw);
+  const dx=e.clientX-drag.x0,dd=2*Math.round(dx/range.dw),dh=view.scale==="day"?Math.round(dx*2/range.dw):dd; // in half-day slots: dd whole days, dh half days in the 日 scale (週 / 月: whole days)
   if(Math.abs(e.clientX-drag.x0)>3){drag.moved=true;dragging=true}
   if(!drag.moved)return;
   drag.items.forEach(it=>{let s=it.s0,en=it.e0;
-    if(drag.m==="m"||it.t.milestone){s+=dd;en+=dd}else if(drag.m==="l"){s=Math.min(it.s0+dd,en)}else{en=Math.max(it.e0+dd,s)}
+    if(it.t.milestone){s+=dd;en+=dd}else if(drag.m==="m"){s+=dh;en+=dh}else if(drag.m==="l"){s=Math.min(it.s0+dh,en)}else{en=Math.max(it.e0+dh,s)} // a ◆ moves by whole days
     it.ns=s;it.ne=en;paintBar(it.t,s,en)});
 });
 function endDrag(e){
   if(!drag)return;const d=drag;drag=null;
   if(d.el&&d.moved&&d.items[0].ns!=null){dragging=false;const p=projects[curId]; // tasks looked up again: a sync may have replaced the project during the drag
-    d.items.forEach(it=>{const t=p.tasks.find(x=>x.id===it.t.id);if(t){t.start=S(it.ns);t.end=S(it.ne)}});save(p);
+    d.items.forEach(it=>{const t=p.tasks.find(x=>x.id===it.t.id);if(t)setH(t,it.ns,it.ne)});save(p);
     if(d.items.some(it=>it.t.id===editingId))openTask(editingId);return}
   dragging=false;selectRow(d.click||d.t.id,e); // a plain click on a bar: Ctrl / Shift select like on a row
 }
@@ -465,7 +466,7 @@ function renderTools(){
   const db2=document.querySelector('#tools [data-cmd=del]');db2.classList.toggle("arm",delArmed);db2.title=delArmed?"もう一度押すと削除":"削除（Delete を 2 回）";
   $("selInfo").textContent=n?`${n} 件選択中${delArmed?"　もう一度押すと削除します":""}`:"行をクリックで選択（Ctrl / Shift で複数）";
 }
-const leafView=()=>view.list&&view.leaf; // 一覧「成果物のみ」: the rows between the folder and the deliverables are not on screen
+const leafView=()=>view.leaf; // 「成果物のみ」 (一覧 and the chart): the rows between the folder and the deliverables are not on screen
 function cmd(c){
   const p=projects[curId];if(!p)return;log("cmd",{c,ids:[...sel].slice(0,30)});if(readOnly&&c!=="copy")return;
   const ts=p.tasks;const idx=selIdx(p);const first=idx[0],last=idx.length?blockEnd(ts,idx[idx.length-1]):-1,lastTop=ts[idx[idx.length-1]]; // lastTop: the last selected row — what is put "below the selection" becomes its sibling
