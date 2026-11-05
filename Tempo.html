@@ -14,12 +14,12 @@
 
 <div class="app">
   <div class="topbar">
-    <div class="brand"><i aria-hidden="true"><b></b><b style="--n:1"></b><b style="--n:2"></b></i><span role="img" aria-label="Tempo"><b style="--n:3">T</b><b style="--n:4">e</b><b style="--n:5">m</b><b style="--n:6">p</b><b style="--n:7">o</b></span><small class="ver">v0.0.11</small></div>
+    <div class="brand"><i aria-hidden="true"><b></b><b style="--n:1"></b><b style="--n:2"></b></i><span role="img" aria-label="Tempo"><b style="--n:3">T</b><b style="--n:4">e</b><b style="--n:5">m</b><b style="--n:6">p</b><b style="--n:7">o</b></span><small class="ver">v0.0.12</small></div>
     <select id="projSel" aria-label="プロジェクト"></select>
     <span class="spacer"></span>
     <span class="mode" id="modeLbl"></span>
     <button class="btn" id="saveBtn" type="button" title="バックアップフォルダに今の状態を保存（ファイル名は押した日時）">保存</button>
-    <select id="meSel" aria-label="自分" title="自分の名前（メンバー名簿から選ぶ・このブラウザに保存）"></select>
+    <select id="meSel" aria-label="自分" title="自分の名前（メンバー名簿から選ぶか、名簿にないときは入力・このブラウザに保存）"></select><input id="meIn" hidden maxlength="40" placeholder="自分の名前" aria-label="自分の名前">
   </div>
   <div class="bar1">
     <div class="seg" role="group" aria-label="表示">
@@ -77,6 +77,11 @@
     <header><h2>タスク編集</h2><button class="btn" type="button" data-close>閉じる</button></header>
     <label id="f-par" title="このタスクの親タスク。変えて「保存」を押すと、その親タスクの下へ移動します">親<select id="f-pa"></select></label>
     <label>タスク名<input id="f-name" required autocomplete="off"></label>
+    <div class="icf" id="f-ic">アイコン
+      <div class="icrow"><div class="icbox" id="f-icbox" tabindex="0" role="button" aria-label="アイコン（画像のドロップ、Enter でファイルを選ぶ、矢印キーで位置、＋ − で拡大・縮小）"><img alt=""><span>画像を<br>ドロップ</span></div>
+        <div class="icside"><span class="hint" id="f-ichint"></span><div><button class="btn" type="button" id="f-icpick">一覧から選ぶ</button> <button class="btn" type="button" id="f-icdel">外す</button></div></div></div>
+      <div class="icgal" id="f-icgal" hidden></div><input type="file" id="f-icin" accept="image/*" hidden>
+    </div>
     <label>担当者（「、」か「,」で区切る）<input id="f-as" list="members" autocomplete="off"></label>
     <div class="mem" id="f-mem" aria-label="メンバーから選ぶ"></div>
     <div class="two"><label>開始日<input type="date" id="f-s" max="9999-12-31"><select id="f-sh" aria-label="開始日の午前・午後"><option value="am">午前から</option><option value="pm">午後から</option></select></label><label>終了日<input type="date" id="f-e" max="9999-12-31"><select id="f-eh" aria-label="終了日の午前・午後"><option value="pm">午後まで</option><option value="am">午前まで</option></select></label></div>
@@ -115,6 +120,7 @@
 
 <div class="pop ctx" id="ctxMenu" role="menu" hidden><button type="button" role="menuitem" id="ctxRename">名前を変更</button><hr role="separator"><button type="button" role="menuitem" data-ctx="copy">コピー<kbd>Ctrl+C</kbd></button><button type="button" role="menuitem" data-ctx="paste">貼り付け<kbd>Ctrl+V</kbd></button><hr role="separator"><button type="button" role="menuitem" data-ctx="insAbove">上にタスクを挿入</button><button type="button" role="menuitem" data-ctx="insBelow">下にタスクを挿入</button><button type="button" role="menuitem" id="ctxBulk">子タスクを一括追加</button><hr role="separator"><button type="button" role="menuitem" id="ctxDv" title="選択中の、子タスクのないタスクに成果物のタグを付けます／外します">成果物にする</button><hr role="separator"><button type="button" role="menuitem" data-ctx="indent">子タスクにする<kbd>Tab</kbd></button><button type="button" role="menuitem" data-ctx="outdent">階層を上げる<kbd>Shift+Tab</kbd></button><button type="button" role="menuitem" data-ctx="up">上へ移動<kbd>Alt+↑</kbd></button><button type="button" role="menuitem" data-ctx="down">下へ移動<kbd>Alt+↓</kbd></button><div class="ctxc" id="ctxColor" hidden>色<input type="color" id="ctxPc" aria-label="親タスクの色"><button type="button" id="ctxPcOk">決定</button><button type="button" id="ctxPcNone">既定の色</button></div></div>
 <div class="pop aspop" id="asPop" hidden><div class="mem" id="asMem" aria-label="担当者を選ぶ"></div></div>
+<div id="icoPop" hidden><img alt=""></div>
 <div class="pop pgpop" id="pgPop" hidden><input type="range" id="pgR" min="0" max="100" step="5" aria-label="進捗"><button class="btn" type="button" id="pgBack">戻す</button></div>
 <form class="pop" id="dropPop" hidden>
   <h3>バックアップを読み込みますか？</h3>

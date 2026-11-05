@@ -95,6 +95,27 @@ async function shWrite(dir,n,obj){let fh,made=false,step="find";
     step="open";const w=await fh.createWritable();step="write";await w.write(JSON.stringify(obj,null,1));step="close";await w.close()}
   catch(e){log("write-fail",{file:n,step,...errInfo(e)});if(made)try{if(!(await fh.getFile()).size)await dir.removeEntry(n)}catch(_){}throw e} // still empty: not what someone else wrote there meanwhile
   return fh}
+// Task icons (v0.0.12): pictures in images/, shared by every project; a task keeps only the file name (t.icon.file, <16 hex>.webp — anything else is not looked up).
+// Each is read once per page and kept as a blob URL with its size; one not found (or no folder) is looked for again after a minute. Loading redraws once
+const IMGF=/^[0-9a-f]{16}\.webp$/,imgs={};let imgT=0; // imgs: name → {url, w, h} | {p: being read} | {at: when it was not found}
+const imgKeep=async b=>{const bm=await createImageBitmap(b),c={url:URL.createObjectURL(b),w:bm.width,h:bm.height};bm.close();return c};
+function imgLoad(f){const c=imgs[f];if(c?.url)return Promise.resolve(c);if(c?.p)return c.p;if(c&&Date.now()-c.at<60e3||!sh.dir||!sh.ok)return Promise.resolve(null);
+  const p=(async()=>{try{return imgs[f]=await imgKeep(await(await(await sh.dir.getDirectoryHandle("images")).getFileHandle(f)).getFile())}
+    catch(e){imgs[f]={at:Date.now()};if(e.name!=="NotFoundError")log("img-fail",{file:f,...errInfo(e)});return null}})();
+  imgs[f]={p};return p}
+function imgOf(f){if(typeof f!=="string"||!IMGF.test(f))return null;const c=imgs[f];if(c?.url)return c;
+  if(!c?.p)imgLoad(f).then(x=>{if(x){clearTimeout(imgT);imgT=setTimeout(()=>{if(!busy())render()},50)}});return null}
+// every picture in images/, for the task panel's list. ponytail: reads them all; fine for a few hundred small pictures
+async function imgList(){let d;try{d=await sh.dir.getDirectoryHandle("images")}catch(e){return[]}const out=[];for await(const[n,h]of d.entries())if(h.kind==="file"&&IMGF.test(n))out.push(n);return out.sort()}
+// a picture dropped into the task panel: shrunk to 512 px on its longer side, as WebP, named by its content — the same picture twice is one file, and
+// nobody else's file has its name. Written at once (the task's icon itself waits for 保存); a file of that name already there is kept, unless it is empty
+async function imgPut(file){const bm=await createImageBitmap(file),k=Math.min(1,512/Math.max(bm.width,bm.height)),cv=new OffscreenCanvas(Math.max(1,Math.round(bm.width*k)),Math.max(1,Math.round(bm.height*k)));
+  cv.getContext("2d").drawImage(bm,0,0,cv.width,cv.height);bm.close();const b=await cv.convertToBlob({type:"image/webp",quality:.9});
+  const n=[...new Uint8Array(await crypto.subtle.digest("SHA-256",await b.arrayBuffer()))].slice(0,8).map(x=>x.toString(16).padStart(2,"0")).join("")+".webp";
+  await shRun(async()=>{const d=await shDir("images");try{if((await(await d.getFileHandle(n)).getFile()).size)return}catch(e){if(e.name!=="NotFoundError")throw e}
+    let step="create";try{const w=await(await d.getFileHandle(n,{create:true})).createWritable();step="write";await w.write(b);step="close";await w.close()}
+    catch(e){log("write-fail",{file:"images/"+n,step,...errInfo(e)});try{await d.removeEntry(n)}catch(_){}throw e}}); // an empty file left would stand for the picture
+  log("img-save",{file:n});imgs[n]=await imgKeep(b);return n}
 // The log (core.js log) goes to logs/<day>_<自分>.log: appended with the look at the folder, at most every 10 s, only when there is something new.
 // Everyone writes their own file and nobody reads them, so they are not in each other's way. What can't be written stays in logBuf and goes out
 // later; a failure here is neither shown nor logged — the log must not add trouble of its own

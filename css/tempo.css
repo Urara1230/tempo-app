@@ -94,6 +94,7 @@ input[type="range"]{accent-color:var(--accent)}
 .topbar .mode.warn{color:#F2A33C;font-weight:700} /* a save failed and is being tried again */
 .topbar #projSel{font-weight:500;max-width:40vw}
 .topbar select,.topbar .btn{height:26px;color:var(--ink)}
+#meIn{height:26px;width:140px;border:1px solid var(--line);border-radius:8px;padding:0 8px;font:inherit;color:var(--ink);background:var(--panel)}
 /* search: a magnifier inside the box on the left — after Uiverse.io, escannord "hot-yak-44" (picked by the user) */
 .q{position:relative;display:inline-flex;align-items:center}
 .q svg{position:absolute;left:9px;width:14px;height:14px;fill:var(--accent);pointer-events:none}
@@ -253,6 +254,29 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .corner .c-d,.corner .c-n,.corner .c-p{font-family:var(--font);font-size:11px}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
 .dot.dv{border-radius:1px} /* a deliverable (成果物): square, same status color */
+/* task icon (v0.0.12, view.js ico): the picture cropped in a ring of the status color — a folder's in its own color; square for a deliverable. #icoPop: the whole picture, on hover */
+.ico{position:relative;width:22px;height:22px;border-radius:50%;border:2px solid var(--c);overflow:hidden;flex:none;background:var(--panel2)}
+.ico.dv{border-radius:4px}
+.parent .ico{border-color:var(--pc)}
+.slim .ico{width:16px;height:16px;border-width:1.5px}
+.ico img{position:absolute;max-width:none;pointer-events:none}
+#icoPop{position:fixed;z-index:26;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18);pointer-events:none}
+#icoPop img{display:block;max-width:256px;max-height:256px}
+/* the icon in the task panel (ui.js icoForm): the picture in a big circle (square for a deliverable) — dragged to move, wheel to zoom; the list of the pictures in images/ under it */
+.icf{display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--ink2)}
+.icrow{display:flex;gap:12px;align-items:center}
+.icbox{position:relative;width:96px;height:96px;flex:none;border-radius:50%;border:2px dashed var(--line);overflow:hidden;display:grid;place-items:center;text-align:center;font-size:11px;line-height:1.4;color:var(--ink2);background:var(--panel2);cursor:pointer;touch-action:none;user-select:none}
+.icbox.dv{border-radius:12px}
+.icbox.has{border-style:solid;border-color:var(--accent);cursor:grab}
+.icbox.off{cursor:default;opacity:.6}
+.icbox:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.icbox.has span,.icbox:not(.has) img{display:none}
+.icbox img{position:absolute;max-width:none;pointer-events:none}
+.icside{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.icgal{display:grid;grid-template-columns:repeat(auto-fill,52px);gap:8px;max-height:180px;overflow:auto}
+.icgal button{width:52px;height:52px;padding:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--panel2);cursor:pointer}
+.icgal button:hover{border-color:var(--accent)}
+.icgal img{width:100%;height:100%;object-fit:cover;display:block}
 .pop .chk{display:flex;align-items:center;gap:6px;font-size:13px}
 .tg{border:0;background:none;width:16px;padding:0;color:var(--ink2);flex:none}
 .tg .fd{display:block;color:var(--pc)}

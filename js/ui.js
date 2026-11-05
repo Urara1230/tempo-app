@@ -16,6 +16,7 @@ function openTask(id){
   parOpts(all,r);FF.forEach(([k,get])=>fset(k,get(r,all)));formInit=Object.fromEntries(FF.map(([k])=>[k,fval(k)]));
   ["f-s","f-sh","f-e","f-eh","f-p","f-ms","f-dv"].forEach(k=>$(k).disabled=!!r.parent||readOnly);$("f-pa").disabled=readOnly;
   formExtras(r);
+  fIcon=r.icon&&IMGF.test(r.icon.file)?{...r.icon}:null;fIcon0=icoN(fIcon);fPar=!!r.parent;$("f-icgal").hidden=true;icoForm();
   render();
 }
 /* task form fields; while the form is open, fields the user has not touched follow changes made elsewhere
@@ -39,6 +40,7 @@ function syncForm(){
   const pv=$("f-pa").value;parOpts(all,r);$("f-pa").value=pv;if($("f-pa").selectedIndex<0)$("f-pa").value=formInit["f-pa"]=parId(all,r); // the picked parent is gone: back to where the task is
   let ch=false;FF.forEach(([k,get])=>{const v=get(r,all);if(fval(k)===formInit[k]&&v!==formInit[k]){fset(k,v);formInit[k]=v;ch=true}});
   if(ch)formExtras(r);
+  icoForm(); // a picture read just now
 }
 const formH=(s,e)=>{const a=2*D(s)+($("f-sh").value==="pm"?1:0);return[a,Math.max(a,2*D(e)+($("f-eh").value==="am"?0:1))]}; // the panel's dates as half-day slots: an afternoon start with a morning end on one day = that afternoon
 function bizHint(){const s=$("f-s").value,e=$("f-e").value;if(!s||!e)return"";if(e<s)return"終了日が開始日より前です";return`${bizH(...formH(s,e))} 営業日（土日祝・会社の休日を除く）`}
@@ -71,11 +73,46 @@ $("taskForm").addEventListener("submit",e=>{
   t.assignees=names($("f-as").value);
   if(!$("f-s").disabled){let s=$("f-s").value||t.start,en=$("f-e").value||t.end;if(en<s)en=s;setH(t,...formH(s,en));t.progress=+$("f-p").value;t.milestone=$("f-ms").checked;setDv(t,$("f-dv").checked)}
   t.memo=$("f-memo").value;
+  const ic=icoN(fIcon);if(ic!==fIcon0){if(ic)t.icon=JSON.parse(ic);else delete t.icon} // stored only when there is one, so old data stays as it was
   // 親 changed: move under it (after its children); （なし） = top level, right after the top-level task it was under. moveBlock saves — one undo step with the fields
   const pa=$("f-pa").value,top=()=>{const ts=p.tasks;let i=ts.indexOf(t);while(ts[i].level>0)i--;return ts[i].id};
   if(pa===formInit["f-pa"]||!moveBlock(p,[t.id],pa||top(),pa?"in":"after"))save(p);
   toast("保存しました");closeDrawer();
 });
+/* icon in the task panel (v0.0.12): fIcon = the icon as 保存 will write it (null = none), fIcon0 = as it was. A picture dropped on the box, or picked by
+   clicking the empty box, goes into the shared folder's images/ at once (storage.js imgPut); one from the list is there already. Drag in the box = move, wheel = zoom */
+let fIcon=null,fIcon0="",fPar=false,icoDrag=null;
+const r3=v=>Math.round(v*1000)/1000,icoN=i=>i?JSON.stringify({file:i.file,x:r3(num(i.x,0,1,.5)),y:r3(num(i.y,0,1,.5)),z:r3(num(i.z,1,5,1))}):"";
+const icoOn=()=>!!sh.dir&&sh.ok&&!readOnly;
+function icoForm(){const box=$("f-icbox"),img=box.firstElementChild,c=fIcon&&imgOf(fIcon.file);
+  box.classList.toggle("dv",!fPar&&$("f-dv").checked);box.classList.toggle("has",!!c);box.classList.toggle("off",!icoOn());
+  if(c){img.src=c.url;img.style.cssText=icoPos(c,fIcon)}else img.removeAttribute("src");
+  $("f-ichint").textContent=!sh.dir?"共有フォルダを選ぶとアイコンを使えます":!sh.ok?"共有フォルダに接続するとアイコンを使えます":fIcon&&!c?"画像を読み込み中…（共有フォルダの images に見つからないときは表示されません）"
+    :readOnly?"":c?"ドラッグで位置、ホイールで拡大・縮小":"画像をドロップするか、枠をクリックしてファイルを選びます";
+  $("f-icpick").disabled=!icoOn();$("f-icdel").hidden=!fIcon||readOnly}
+async function icoAdd(f){if(!icoOn())return;$("f-ichint").textContent="画像を保存中…";
+  try{fIcon={file:await imgPut(f),x:.5,y:.5,z:1};$("f-icgal").hidden=true}catch(e){log("img-fail",{step:"add",...errInfo(e)});
+    toast(e?.name==="InvalidStateError"?"画像として読み込めませんでした。PNG・JPEG・WebP などの画像ファイルを選んでください":`画像を保存できませんでした（${e?.name||"Error"}）。共有フォルダにつながっているか確認してください`)}icoForm()}
+const icb=$("f-icbox");
+icb.addEventListener("click",()=>{if(!fIcon&&icoOn())$("f-icin").click()});
+$("f-icin").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f)icoAdd(f)});
+icb.addEventListener("dragover",e=>{e.preventDefault();e.stopPropagation()});
+icb.addEventListener("drop",e=>{e.preventDefault();e.stopPropagation();const f=e.dataTransfer.files[0];if(f)icoAdd(f)}); // not the page's drop (a backup file)
+icb.addEventListener("pointerdown",e=>{if(!fIcon||!imgs[fIcon.file]?.url||readOnly)return;e.preventDefault();icb.setPointerCapture(e.pointerId);icoDrag=[e.clientX,e.clientY]});
+icb.addEventListener("pointermove",e=>{if(!icoDrag)return;const c=imgs[fIcon.file],s=icb.clientWidth*num(fIcon.z,1,5,1)/Math.min(c.w,c.h); // s = screen px per picture px
+  fIcon={...fIcon,x:num(num(fIcon.x,0,1,.5)-(e.clientX-icoDrag[0])/(s*c.w),0,1,.5),y:num(num(fIcon.y,0,1,.5)-(e.clientY-icoDrag[1])/(s*c.h),0,1,.5)};icoDrag=[e.clientX,e.clientY];icoForm()});
+["pointerup","pointercancel"].forEach(k=>icb.addEventListener(k,()=>icoDrag=null));
+// the same without the mouse: Enter / Space on the empty box = pick a file; arrows move the picture, + / − zoom
+icb.addEventListener("keydown",e=>{if(readOnly)return;if(!fIcon){if((e.key==="Enter"||e.key===" ")&&icoOn()){e.preventDefault();$("f-icin").click()}return}
+  if(!imgs[fIcon.file]?.url)return;const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key],z=e.key==="+"||e.key===";"?1.1:e.key==="-"?1/1.1:0;if(!d&&!z)return;e.preventDefault();e.stopPropagation();
+  fIcon=d?{...fIcon,x:num(num(fIcon.x,0,1,.5)+d[0]*.02,0,1,.5),y:num(num(fIcon.y,0,1,.5)+d[1]*.02,0,1,.5)}:{...fIcon,z:num(num(fIcon.z,1,5,1)*z,1,5,1)};icoForm()});
+icb.addEventListener("wheel",e=>{if(!fIcon||!imgs[fIcon.file]?.url||readOnly)return;e.preventDefault();fIcon={...fIcon,z:num(num(fIcon.z,1,5,1)*Math.exp(-e.deltaY/500),1,5,1)};icoForm()},{passive:false});
+$("f-icpick").addEventListener("click",async()=>{const g=$("f-icgal");if(!g.hidden){g.hidden=true;return}g.hidden=false;g.textContent="読み込み中…";
+  const ns=await imgList(),cs=await Promise.all(ns.map(imgLoad));
+  g.innerHTML=ns.map((n,i)=>cs[i]?`<button type="button" data-icf="${n}" title="この画像を使う" aria-label="この画像を使う"><img src="${cs[i].url}" alt=""></button>`:"").join("")||'<span class="hint">共有フォルダの images に画像がありません</span>'}); // n: <16 hex>.webp (IMGF)
+$("f-icgal").addEventListener("click",e=>{const b=e.target.closest("[data-icf]");if(!b||readOnly)return;fIcon={file:b.dataset.icf,x:.5,y:.5,z:1};$("f-icgal").hidden=true;icoForm()});
+$("f-icdel").addEventListener("click",()=>{fIcon=null;icoForm()});
+$("f-dv").addEventListener("change",icoForm); // a deliverable's icon is square
 $("taskDel").addEventListener("click",e=>{
   const b=e.currentTarget;if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="もう一度押すと削除";return}
   const p=projects[curId];p.tasks=p.tasks.filter(t=>t.id!==editingId);save(p);closeDrawer();toast("削除しました");
@@ -83,9 +120,11 @@ $("taskDel").addEventListener("click",e=>{
 $("projForm").addEventListener("submit",e=>{e.preventDefault();const p=projects[curId];if(readOnly)return;p.name=$("p-name").value.trim()||"無題";save(p);toast("保存しました");closeDrawer()});
 $("p-copy").addEventListener("click",()=>{const v=$("p-json").value;navigator.clipboard.writeText(v).then(()=>toast("コピーしました"),()=>{$("p-json").select();toast("選択しました。Ctrl+C でコピーしてください")})});
 /* replace the current project's tasks (and milestones / members / name when given); shared by JSON and Excel import */
-function replaceData(d){
+// xl: from Excel, which has no icons — a task keeps the icon it has now (same ID). An icon is kept only with a picture name that can be looked up (IMGF)
+function replaceData(d,xl){
   const p=projects[curId];if(!p||readOnly)return;const tasks=Array.isArray(d)?d:d.tasks;if(!Array.isArray(tasks))throw 0;
-  p.tasks=tasks.filter(t=>t&&t.name&&isDay(t.start)&&isDay(t.end)).map(t=>({id:t.id?String(t.id):uid(),name:String(t.name),start:t.start,end:t.end,progress:Math.max(0,Math.min(100,+t.progress||0)),assignees:Array.isArray(t.assignees)?t.assignees.map(String):[],level:+t.level||0,milestone:!!t.milestone,memo:t.memo||"",deps:Array.isArray(t.deps)?t.deps.map(String):[],...(isHex(t.color)?{color:t.color}:{}),...(t.deliverable?{deliverable:true}:{}),...(t.startPM?{startPM:true}:{}),...(t.endAM?{endAM:true}:{})}));
+  const was=Object.fromEntries(p.tasks.map(t=>[t.id,t.icon])),icoIn=i=>i&&IMGF.test(i.file)?{icon:JSON.parse(icoN(i))}:{};
+  p.tasks=tasks.filter(t=>t&&t.name&&isDay(t.start)&&isDay(t.end)).map(t=>({id:t.id?String(t.id):uid(),name:String(t.name),start:t.start,end:t.end,progress:Math.max(0,Math.min(100,+t.progress||0)),assignees:Array.isArray(t.assignees)?t.assignees.map(String):[],level:+t.level||0,milestone:!!t.milestone,memo:t.memo||"",deps:Array.isArray(t.deps)?t.deps.map(String):[],...(isHex(t.color)?{color:t.color}:{}),...(t.deliverable?{deliverable:true}:{}),...(t.startPM?{startPM:true}:{}),...(t.endAM?{endAM:true}:{}),...icoIn(t.icon||xl&&was[String(t.id)])}));
   if(Array.isArray(d.milestones))p.milestones=d.milestones.filter(m=>m&&isDay(m.date)).map(m=>({id:m.id||uid(),date:m.date,title:String(m.title||""),color:MSC.includes(m.color)?m.color:"blue"}));
   if(Array.isArray(d.members))p.members=d.members.map(String);
   if(Array.isArray(d.holidays))p.holidays=d.holidays.filter(h=>h&&isDay(h.date)).map(h=>({date:h.date,color:isHex(h.color)?h.color:HOLC}));
@@ -137,7 +176,7 @@ $("p-xout").addEventListener("click",()=>{const p=projects[curId];if(p)xdl(toXls
 $("p-xlist").addEventListener("click",()=>{const p=projects[curId];if(p)xdl(toListXlsx(p),p," 一覧")});
 $("p-xin").addEventListener("click",()=>$("p-xfile").click());
 $("p-xfile").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
-  try{replaceData(await fromXlsx(await f.arrayBuffer()))}catch(err){toast("Excelを読み取れませんでした。「タイプ」「タイトル」の列がある .xlsx（Brabio 形式）か確認してください")}});
+  try{replaceData(await fromXlsx(await f.arrayBuffer()),true)}catch(err){toast("Excelを読み取れませんでした。「タイプ」「タイトル」の列がある .xlsx（Brabio 形式）か確認してください")}});
 /* backup folder (storage.js): pick it, 保存 button, what was saved last, restore from any saved file */
 function bkInfo(){
   $("saveBtn").hidden=!window.showDirectoryPicker;
@@ -212,7 +251,10 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!drawer.hidden)clos
 $("projSel").addEventListener("change",e=>setCur(e.target.value));
 $("projNew").addEventListener("click",newProject);
 $("projSet").addEventListener("click",()=>$("projForm").hidden?openProject():closeDrawer()); // it shows a cross while open: pressing it again closes
-$("meSel").addEventListener("change",e=>{me=e.target.value;ls.set("mg.me",me);render()});
+const setMe=v=>{me=v;ls.set("mg.me",me);render()};
+$("meSel").addEventListener("change",e=>{const s=e.target;if(!s.selectedOptions[0].hasAttribute("data-in"))return setMe(s.value);s.hidden=true;const i=$("meIn");i.hidden=false;i.value=me;i.focus();i.select()}); // 名前を入力…: a name off the roster, so a newcomer can take the lock and add themselves
+$("meIn").addEventListener("keydown",e=>{if(e.key!=="Enter"&&e.key!=="Escape")return;e.stopPropagation();const v=e.target.value.trim();e.target.blur();if(e.key==="Enter"&&v)setMe(v)});
+$("meIn").addEventListener("blur",e=>{e.target.hidden=true;$("meSel").hidden=false;render()}); // left without Enter: nothing changes
 $("whoSel").addEventListener("change",e=>{view.who=e.target.value;render()});
 document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>{view.list=b.dataset.view==="list";ls.set("mg.view",view.list?"list":"gantt");render()}));
 $("leafBtn").addEventListener("click",()=>{view.leaf=!view.leaf;ls.set("mg.leaf",view.leaf?"1":"");render()}); // only the top folders and the tagged tasks (deliverables), in 一覧 and the chart
@@ -320,6 +362,11 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&pgEdit)closePg()});
 
 /* right-click menu on the task name side */
 const ctx=$("ctxMenu");let ctxId=null;
+// a task icon held under the mouse for 0.2 s: the whole picture beside it (v0.0.12)
+let icoT=0;const icoOff=()=>{clearTimeout(icoT);$("icoPop").hidden=true};
+chart.addEventListener("mouseover",e=>{const i=e.target.closest(".ico");if(!i)return;icoOff();icoT=setTimeout(()=>{const c=imgs[i.dataset.img];if(!c?.url||!i.isConnected)return;const p=$("icoPop"),b=i.getBoundingClientRect();
+  p.firstChild.src=c.url;p.hidden=false;const ph=c.h*Math.min(1,256/c.w,256/c.h)+10;p.style.left=b.right+8+"px";p.style.top=Math.max(8,Math.min(innerHeight-ph-8,b.top+b.height/2-ph/2))+"px"},200)});
+chart.addEventListener("mouseout",e=>{if(e.target.closest(".ico"))icoOff()});
 chart.addEventListener("contextmenu",e=>{const o=e.target.closest("[data-open]");if(!o||readOnly||e.target.closest("input"))return;e.preventDefault();
   ctxId=o.dataset.open;if(!sel.has(ctxId))selectRow(ctxId);
   const r=derive(projects[curId]).find(x=>x.id===ctxId);$("ctxColor").hidden=!r?.parent; // 色 only for parents
