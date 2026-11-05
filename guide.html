@@ -101,6 +101,12 @@ ol.steps>li{margin-bottom:6px}
 <figcaption>Tempo.bat は、開くたびに共有ドライブから最新の Tempo を自分のパソコンにコピーして開きます。データは共有ドライブの <code>data</code> に保存されます。</figcaption>
 </figure>
 <div class="note warn">共有ドライブの <code>app\Tempo.html</code> を直接開いたり、開いたページをブックマークしたりしないでください。共有フォルダが使えず、新しいバージョンにも更新されません。いつも <code>Tempo.bat</code> から開きます。</div>
+<div class="note"><b>なぜ Tempo.bat から開くのか</b>
+<ul>
+  <li><b>共有ドライブ上のページは、フォルダを読み書きできない</b>：Tempo は共有ドライブの <code>data</code> にプロジェクト、編集ロック、アイコンの画像を書き込みます。ページそのものが共有ドライブ（ネットワーク上の場所）にあると、Chrome はページにフォルダの読み書きを許可しません（「フォルダを選ぶ」を押しても許可の確認が出ません）。ページが自分のパソコンにあれば、共有ドライブの <code>data</code> を選んで使えます。<b>データは共有ドライブ、ページは自分のパソコン</b>という分け方です。</li>
+  <li><b>ブックマークでは新しいバージョンにならない</b>：ブックマークは、ある時点でコピーしたページを開くだけです。新しいバージョンが出るたびに各自でコピーし直す必要があり、古いままだと共有プロジェクトは閲覧のみになります（データの形が変わっていることがあるため）。</li>
+  <li><code>Tempo.bat</code> は、開くたびに共有ドライブの <code>app</code> から最新のページを自分のパソコンにコピーしてから開くので、この 2 つをまとめて解決します。<code>Tempo.bat</code> 自体は新しいバージョンが出ても入れ替える必要はありません。</li>
+</ul></div>
 <p>黒いウィンドウが一瞬表示されますが、問題ありません。気になる場合は <code>Tempo.bat</code> のショートカットを作り、「プロパティ」→「実行時の大きさ」を「最小化」にします。</p>
 
 <h3>1-2. 共有フォルダ（data）を選ぶ</h3>
@@ -110,7 +116,7 @@ ol.steps>li{margin-bottom:6px}
   <li>Chrome がフォルダの使用許可を求めるので「許可」を選びます。</li>
 </ol>
 <div class="row2">
-<figure><img src="guide/settings.png" alt="設定パネル。1 メンバーの入力欄、2 共有フォルダの「フォルダを選ぶ」、3 バックアップの「保存先フォルダを選ぶ」" width="380" height="702" loading="lazy"><figcaption>「設定」パネル。<span class="n">1</span>メンバー　<span class="n">2</span>共有フォルダ　<span class="n">3</span>バックアップ</figcaption></figure>
+<figure><img src="guide/settings.png" alt="設定パネル。1 メンバーの入力欄、2 共有フォルダの「フォルダを選ぶ」、3 バックアップの「保存先フォルダを選ぶ」" width="380" height="805" loading="lazy"><figcaption>「設定」パネル。<span class="n">1</span>メンバー　<span class="n">2</span>共有フォルダ　<span class="n">3</span>バックアップ</figcaption></figure>
 <div style="flex:1 1 300px">
 <ul>
   <li>選べるのは名前が <code>data</code> のフォルダだけです（選び間違いを防ぐため）。</li>
@@ -122,17 +128,18 @@ ol.steps>li{margin-bottom:6px}
 
 <h3>1-3. 自分の名前を選ぶ</h3>
 <p>右上の「自分」<span class="n">1</span>で自分の名前を選びます。<b>「自分」を選ぶまで、共有プロジェクトは閲覧のみです</b>（だれが編集中かを表示するために使います）。</p>
-<figure><img src="guide/me.png" alt="右上の「自分」のプルダウン" width="309" height="46" loading="lazy"><figcaption>このパソコンのブラウザに記憶されるので、毎回選ぶ必要はありません。</figcaption></figure>
+<figure><img src="guide/me.png" alt="右上の「自分」のプルダウン" width="306" height="46" loading="lazy"><figcaption>このパソコンのブラウザに記憶されるので、毎回選ぶ必要はありません。</figcaption></figure>
 <div class="note">一覧に自分の名前がないときは、プロジェクトのメンバー名簿に登録されていません。「自分」の最後の「名前を入力…」を選んで自分の名前を入力し、Enter を押してください。そのあと編集ロック（<a href="#lock">3 章</a>）をかけて、「設定」→「メンバー」<span class="n">1</span>（上の「設定」パネルの写真）で自分を追加します。</div>
 
 <h3>1-4. プロジェクトを開く</h3>
-<p>左上のプロジェクトのプルダウンから選びます。名前の前に 👥 が付いているのが共有ドライブのプロジェクトです。</p>
+<p>左上のプロジェクトのプルダウンから選びます。名前の前に 👥 が付いているのが共有ドライブのプロジェクトです。新しく作るときは、プルダウンのいちばん下の「＋ 新しいプロジェクト」を選びます。</p>
+<p>画面はふだん白です。黒い画面がよいときは「設定」→「このパソコン」→「画面の色」で「ダーク」を選びます。</p>
 
 <h3>1-5. （おすすめ）バックアップ先を選ぶ</h3>
 <p>「設定」→「バックアップ」の「保存先フォルダを選ぶ」<span class="n">3</span>で、<b>自分のパソコン上の</b>フォルダを選びます。変更のたびに <code>auto.backup.json</code> が自動で上書き保存され、上部バーの「保存」を押すと、その時点のファイルが日時付きで追加されます。共有ドライブの <code>data</code> の中は選ばないでください。</p>
 
 <h2 id="screen">2. 画面の見方</h2>
-<figure><img src="guide/screen.png" alt="Tempo の画面全体。番号 1 から 14 の説明は下の表" width="1578" height="690" loading="lazy"></figure>
+<figure><img src="guide/screen.png" alt="Tempo の画面全体。番号 1 から 14 の説明は下の表" width="1584" height="793" loading="lazy"></figure>
 <table>
   <tr><th>番号</th><th>名前</th><th>はたらき</th></tr>
   <tr><td><span class="n">1</span></td><td>プロジェクト</td><td>開くプロジェクトを選びます（👥 = 共有）</td></tr>
@@ -141,12 +148,12 @@ ol.steps>li{margin-bottom:6px}
   <tr><td><span class="n">4</span></td><td>ガント｜一覧</td><td>ガントチャートと一覧表の切り替え（<a href="#list">第 6 章</a>）</td></tr>
   <tr><td><span class="n">5</span></td><td>成果物のみ</td><td>フォルダと成果物だけを表示（<a href="#list">第 6 章</a>）</td></tr>
   <tr><td><span class="n">6</span></td><td>重ねて表示</td><td>別のプロジェクトを下に重ねて見比べます（<a href="#overlay">第 7 章</a>）</td></tr>
-  <tr><td><span class="n">7</span></td><td>期間・節目・全体進捗</td><td>プロジェクト全体の期間、次のマイルストーンまでの日数、全体の進捗</td></tr>
-  <tr><td><span class="n">8</span></td><td>設定</td><td>名前、メンバー、Excel、バックアップ、共有フォルダ、プロジェクトの追加・削除。左は検索欄（タスク名で探す）</td></tr>
+  <tr><td><span class="n">7</span></td><td>期間・節目・全体進捗</td><td>プロジェクト全体の期間、次のマイルストーンまでの日数、全体の進捗（上部バーのプロジェクト名の右）</td></tr>
+  <tr><td><span class="n">8</span></td><td>設定</td><td>名前、メンバー、画面の色、共有フォルダ、バックアップ、Excel などの書き出し・読み込み、プロジェクトの削除（<a href="#setup">第 1 章</a>）。少し左に検索欄（タスク名で探す）</td></tr>
   <tr><td><span class="n">9</span></td><td>担当者で絞り込み</td><td>選んだ人のタスクだけを表示</td></tr>
-  <tr><td><span class="n">10</span></td><td>状態ラベル</td><td>押すとその状態のタスクだけを表示（もう一度押すと解除）</td></tr>
+  <tr><td><span class="n">10</span></td><td>状態ラベル</td><td>押すとその状態のタスクだけを表示（もう一度押すと解除）。右の「?」にマウスを置くと色の意味が出ます</td></tr>
   <tr><td><span class="n">11</span></td><td>日｜週｜月</td><td>タイムラインの目盛り。右の「今日」で今日の位置へ</td></tr>
-  <tr><td><span class="n">12</span></td><td>ツールバー</td><td>元に戻す、コピー、挿入、階層、移動、リンク、担当、編集、追加、削除。ボタンにマウスを置くと説明が出ます</td></tr>
+  <tr><td><span class="n">12</span></td><td>ツールバー</td><td>元に戻す / ＋ 追加・挿入 / コピー / 階層・移動 / リンク / 担当 / 編集・削除。ボタンにマウスを置くと説明が出ます</td></tr>
   <tr><td><span class="n">13</span></td><td>タスク表</td><td>タスク名・担当・開始・終了・日数（営業日）・進捗。共有プロジェクトでは左上にロックのスイッチ（<a href="#lock">第 3 章</a>）</td></tr>
   <tr><td><span class="n">14</span></td><td>タイムライン</td><td>バーで日程を表示。赤い縦線が今日、灰色の背景が土日、色付きが祝日・会社の休日</td></tr>
 </table>
@@ -167,9 +174,9 @@ ol.steps>li{margin-bottom:6px}
 </svg>
 </figure>
 <div class="row2">
-<figure><img src="guide/lock-off.png" alt="閲覧のみ（編集するにはこのスイッチを押します）" width="552" height="93" loading="lazy"><figcaption>閲覧のみ：押すと編集を始めます</figcaption></figure>
-<figure><img src="guide/lock-mine.png" alt="編集中（ほかの人は閲覧のみ）" width="552" height="93" loading="lazy"><figcaption>編集中（緑）：終わったらもう一度押します</figcaption></figure>
-<figure><img src="guide/lock-other.png" alt="佐藤さんが編集中（閲覧のみ）" width="552" height="93" loading="lazy"><figcaption>ほかの人が編集中（赤）：終わるのを待ちます</figcaption></figure>
+<figure><img src="guide/lock-off.png" alt="閲覧のみ（編集するにはこのスイッチを押します）" width="552" height="86" loading="lazy"><figcaption>閲覧のみ：押すと編集を始めます</figcaption></figure>
+<figure><img src="guide/lock-mine.png" alt="編集中（ほかの人は閲覧のみ）" width="552" height="86" loading="lazy"><figcaption>編集中（緑）：終わったらもう一度押します</figcaption></figure>
+<figure><img src="guide/lock-other.png" alt="佐藤さんが編集中（閲覧のみ）" width="552" height="86" loading="lazy"><figcaption>ほかの人が編集中（赤）：終わるのを待ちます</figcaption></figure>
 </div>
 <ol class="steps">
   <li>スイッチを押します。最新の内容を読み込んでからロックし、緑の「編集中」になります。</li>
@@ -191,28 +198,28 @@ ol.steps>li{margin-bottom:6px}
   <tr><td>詳しく編集</td><td>行かバーを<b>ダブルクリック</b>（または選択して Enter）</td></tr>
   <tr><td>日付を変える</td><td>バーの中央をドラッグで移動、両端をドラッグで開始日・終了日を変更</td></tr>
   <tr><td>進捗を変える</td><td>バーの右の「N%」を<b>ダブルクリック</b>してスライダーで調整</td></tr>
-  <tr><td>担当者を決める</td><td>タスク表の「担当」の枠をクリックしてメンバーを選ぶ</td></tr>
+  <tr><td>担当者を決める</td><td>タスク表の「担当」をクリックして名前を押す（もう一度押すと外れる。何人でも）。右上の × で閉じます。<b>先に Ctrl / Shift で複数のタスクを選んでおくと、選んだタスクすべてに一度に付きます</b></td></tr>
   <tr><td>順番・階層を変える</td><td>行を約 0.35 秒<b>長押し</b>してドラッグ（行の上側 = 上へ、下側 = 下へ、中央 = 子タスクに）。または Tab / Shift+Tab</td></tr>
-  <tr><td>削除</td><td>選択して Delete を 2 回（ツールバーの × を 2 回でも）</td></tr>
+  <tr><td>削除</td><td>選択して Delete を 2 回（ツールバーの「削除」を 2 回でも）</td></tr>
   <tr><td>元に戻す</td><td>Ctrl+Z（やり直しは Ctrl+Y）</td></tr>
 </table>
-<figure><img src="guide/bar.png" alt="バー。1 中央をドラッグで移動、2 端をドラッグで日付変更、3 進捗をダブルクリック" width="498" height="109" loading="lazy"><figcaption><span class="n">1</span>中央をドラッグで移動　<span class="n">2</span>端をドラッグで開始日・終了日　<span class="n">3</span>ダブルクリックで進捗。矢印はリンク（前の工程が延びると後ろが自動でずれます）</figcaption></figure>
+<figure><img src="guide/bar.png" alt="バー。1 中央をドラッグで移動、2 端をドラッグで日付変更、3 進捗をダブルクリック" width="509" height="109" loading="lazy"><figcaption><span class="n">1</span>中央をドラッグで移動　<span class="n">2</span>端をドラッグで開始日・終了日　<span class="n">3</span>ダブルクリックで進捗。矢印はリンク（前の工程が延びると後ろが自動でずれます）</figcaption></figure>
 <div class="row2">
 <figure><img src="guide/task-panel.png" alt="タスク編集パネル" width="380" height="805" loading="lazy"><figcaption>ダブルクリックで開くパネル</figcaption></figure>
 <div style="flex:1 1 300px">
-<p><span class="n">1</span><b>親</b>：どのタスクの下に入るか。変えて「保存」で移動します</p>
+<p><span class="n">1</span><b>親</b>：どのタスクの下に入るか。変えて「保存」（または「完了」）で移動します</p>
 <p><span class="n">2</span><b>アイコン</b>：タスクの前に付ける画像（<a href="#icon">下の「アイコン」</a>）</p>
-<p><span class="n">3</span><b>担当者</b>：下の名前を押しても選べます</p>
+<p><span class="n">3</span><b>担当者</b>：名前を押すと付く・もう一度押すと外れる。名簿にない名前は下の欄に入力して Enter</p>
 <p><span class="n">4</span><b>開始日・終了日</b></p>
 <p><span class="n">5</span><b>午前から / 午後から</b>：半日単位にできます（終了日は「午後まで / 午前まで」）</p>
 <p><span class="n">6</span><b>進捗</b></p>
 <p><span class="n">7</span><b>成果物</b>：成果物のタグ（<a href="#list">第 6 章</a>）</p>
 <p><span class="n">8</span><b>メモ</b>：説明やリンクなど</p>
-<p>最後に「保存」を押します。</p>
+<p>最後に「保存」か右上の「完了」を押します（Esc で閉じても、ほかのタスクを開いても保存されます。戻すときは Ctrl+Z）。</p>
 </div>
 </div>
 <div class="row2">
-<figure><img src="guide/context-menu.png" alt="右クリックメニュー" width="560" height="421" loading="lazy"><figcaption>行を右クリックすると、名前の変更、コピー、挿入、子タスクの一括追加、成果物のタグ、階層・移動が使えます</figcaption></figure>
+<figure><img src="guide/context-menu.png" alt="右クリックメニュー" width="560" height="371" loading="lazy"><figcaption>行を右クリックすると、名前の変更、コピー、挿入、子タスクの一括追加、成果物のタグ、階層・移動が使えます</figcaption></figure>
 <div style="flex:1 1 260px">
 <p><b>子タスクをまとめて追加</b>：右クリック →「子タスクを一括追加」で、1 行に 1 つ名前を書く（貼り付けもできます）と、まとめて子タスクになります。</p>
 <p><b>親タスク</b>：子タスクを持つタスクです。日付・進捗・担当は子タスクから自動で計算されるので、子タスクのほうを変えてください。階層は 4 段までです。</p>
@@ -223,17 +230,17 @@ ol.steps>li{margin-bottom:6px}
 <p>タスク名が ID ばかりで、どのキャラクターか分からないときは、タスクやフォルダの前に<b>画像</b>を付けられます。アイコンは名前の前の丸の代わりに表示され（成果物は四角）、外側の線の色が状態を表します。フォルダのアイコンは 📂 と名前の間に出ます。</p>
 <figure><img src="guide/icon-rows.png" alt="アイコンを付けたタスクとフォルダ" width="548" height="391" loading="lazy"><figcaption>同じ画像を何個のタスクに付けても構いません。アイコンのないタスクは元の丸のままです</figcaption></figure>
 <div class="row2">
-<figure><img src="guide/icon-panel.png" alt="詳細編集パネルのアイコン" width="364" height="213" loading="lazy"><figcaption>詳細編集パネルの「アイコン」</figcaption></figure>
+<figure><img src="guide/icon-panel.png" alt="詳細編集パネルのアイコン" width="364" height="212" loading="lazy"><figcaption>詳細編集パネルの「アイコン」</figcaption></figure>
 <div style="flex:1 1 300px">
 <p><span class="n">1</span>パソコンの画像をこの枠に<b>ドラッグ＆ドロップ</b>します（空の枠をクリックしてファイルを選んでも構いません）。画像は共有フォルダに保存され、みんなが使えるようになります。枠の中を<b>ドラッグ</b>すると丸に映る部分が動き、<b>マウスホイール</b>で拡大・縮小します</p>
 <p><span class="n">2</span><b>一覧から選ぶ</b>：だれかがすでに入れた画像から選びます。ほかのプロジェクトで使っている画像も選べます</p>
 <p><span class="n">3</span><b>外す</b>：このタスクからアイコンを外します（画像そのものは残ります）</p>
 <p><span class="n">4</span>入っている画像の一覧。押すとその画像になります</p>
-<p>最後に「保存」を押します。</p>
+<p>最後に「保存」か右上の「完了」を押します（Esc で閉じても、ほかのタスクを開いても保存されます。戻すときは Ctrl+Z）。</p>
 </div>
 </div>
 <div class="row2">
-<figure><img src="guide/icon-hover.png" alt="アイコンにマウスを置くと画像全体が出る" width="280" height="272" loading="lazy"><figcaption>アイコンの上にマウスを少し置くと、画像全体が表示されます</figcaption></figure>
+<figure><img src="guide/icon-hover.png" alt="アイコンにマウスを置くと画像全体が出る" width="280" height="266" loading="lazy"><figcaption>アイコンの上にマウスを少し置くと、画像全体が表示されます</figcaption></figure>
 <div style="flex:1 1 260px">
 <div class="note">アイコンは<b>共有フォルダにつながっているとき</b>だけ使えます（<a href="#setup">1-2</a>）。つながっていないときは、アイコンの代わりに元の丸が表示されます。</div>
 </div>
@@ -246,7 +253,7 @@ ol.steps>li{margin-bottom:6px}
   <tr><td>完了（灰）</td><td>進捗 100%</td><td>灰色</td></tr>
   <tr><td>未着手（青）</td><td>開始日がまだ来ていない</td><td>青</td></tr>
   <tr><td>順調（緑）</td><td>予定どおり</td><td>青</td></tr>
-  <tr><td>進捗遅れ（橙）</td><td>経過した日数に対して、進捗が 10 ポイント以上遅れている</td><td>右端が紫 → ピンク（ピンクほど遅れが大きい）</td></tr>
+  <tr><td>進捗遅れ（赤紫）</td><td>経過した日数に対して、進捗が 10 ポイント以上遅れている</td><td>右端が紫 → ピンク（ピンクほど遅れが大きい）</td></tr>
   <tr><td>期限切れ（赤）</td><td>終了日を過ぎても終わっていない</td><td>赤 → 黄</td></tr>
 </table>
 <ul>
@@ -258,14 +265,14 @@ ol.steps>li{margin-bottom:6px}
 
 <h2 id="list">6. 一覧と成果物のみ</h2>
 <p>「一覧」を押すと、タイムラインなしの表になります。いちばん下の階層のタスクの「完了」にチェックを入れると進捗 100%、外すと 0% です。親タスクには「1/3」のように完了した数が出ます。「ガント」で元に戻ります。</p>
-<figure><img src="guide/list.png" alt="一覧表示" width="1552" height="393" loading="lazy"></figure>
+<figure><img src="guide/list.png" alt="一覧表示" width="1558" height="393" loading="lazy"></figure>
 <p><span class="n">1</span>「成果物のみ」をオンにすると、いちばん上の親タスク（フォルダ）と<b>成果物のタグが付いたタスク</b>だけになります。どこまで進んだかの確認に使います。ガントでも一覧でも使えます。</p>
-<figure><img src="guide/leaf.png" alt="成果物のみの表示" width="1600" height="524" loading="lazy"></figure>
+<figure><img src="guide/leaf.png" alt="成果物のみの表示" width="1600" height="484" loading="lazy"></figure>
 <p><b>成果物のタグの付け方</b>：タスクを選んで（複数可）右クリック →「成果物にする」。または編集パネルの「成果物」にチェック。子タスクの一括追加では「成果物として追加」に最初からチェックが入っています。</p>
 
 <h2 id="overlay">7. 重ねて表示</h2>
 <p>ほかのチームのプロジェクトを、自分のプロジェクトの下に<b>同じ日付の目盛りで</b>重ねて表示します。たとえばモーションのプロジェクトを開いてキャラクターのプロジェクトを重ねると、「リグがまだ終わっていないのにモーションを始める予定になっている」といったずれが見つかります。</p>
-<figure><img src="guide/overlay.png" alt="重ねて表示。1 重ねて表示のプルダウン、2 重ねたプロジェクトの見出し" width="1600" height="638" loading="lazy"><figcaption><span class="n">1</span>「重ねて表示」で相手のプロジェクトを選ぶ　<span class="n">2</span>見出しに名前と全体進捗。相手のマイルストーンもこの行に出ます</figcaption></figure>
+<figure><img src="guide/overlay.png" alt="重ねて表示。1 重ねて表示のプルダウン、2 重ねたプロジェクトの見出し" width="1600" height="741" loading="lazy"><figcaption><span class="n">1</span>「重ねて表示」で相手のプロジェクトを選ぶ　<span class="n">2</span>見出しに名前と全体進捗。相手のマイルストーンもこの行に出ます</figcaption></figure>
 <ul>
   <li>相手のタスクは薄い色で、<b>閲覧のみ</b>です（選択・編集・ドラッグはできません）。親タスクは折りたためます。見出しの ▾ で全体を折りたためます。</li>
   <li>「成果物のみ」をオンにすると、相手も成果物だけになります。担当者の絞り込み、状態ラベル、検索は相手には効きません。</li>
@@ -276,11 +283,11 @@ ol.steps>li{margin-bottom:6px}
 
 <h2 id="milestone">8. マイルストーンと会社の休日</h2>
 <div class="row2">
-<figure><img src="guide/milestone.png" alt="マイルストーンと会社の休日を設定する画面" width="360" height="219" loading="lazy"></figure>
+<figure><img src="guide/milestone.png" alt="マイルストーンと会社の休日を設定する画面" width="360" height="208" loading="lazy"></figure>
 <div style="flex:1 1 300px">
 <p>タイムラインの上の<b>日付をクリック</b>すると、この画面が開きます。</p>
 <ul>
-  <li><b>マイルストーン</b>：色を選び、タイトル（例：α版提出）を入れて「登録する」。旗が立ち、2 行目に「次の節目」として残り日数が出ます。旗をクリックすると変更・削除できます。</li>
+  <li><b>マイルストーン</b>：色を選び、タイトル（例：α版提出）を入れて「登録する」。旗が立ち、上部バーに「次の節目」として残り日数が出ます。旗をクリックすると変更・削除できます。</li>
   <li><b>会社の休日</b>：色を選んで「休日にする」。その日は営業日に数えません（日本の祝日は最初から入っています）。もう一度クリックして「休日を解除」で戻ります。</li>
 </ul>
 </div>
@@ -288,10 +295,10 @@ ol.steps>li{margin-bottom:6px}
 
 <h2 id="excel">9. Excel とバックアップ</h2>
 <div class="row2">
-<figure><img src="guide/settings-io.png" alt="設定パネルの書き出し・読み込みとバックアップ" width="380" height="702" loading="lazy"></figure>
+<figure><img src="guide/settings-io.png" alt="設定パネルの書き出し・読み込みとバックアップ" width="380" height="805" loading="lazy"></figure>
 <div style="flex:1 1 300px">
-<p><span class="n">1</span><b>書き出す</b>：Excel（Brabio 形式）で保存します。「一覧を書き出す」は Tempo を使わない人への報告用です（Tempo には読み込めません）。</p>
-<p><span class="n">2</span><b>読み込んで置き換え</b>：Excel を読み込みます。<b>今のプロジェクトのタスクがすべて置き換わります</b>（間違えたら Ctrl+Z）。</p>
+<p><span class="n">1</span><b>Excel（Brabio 形式）</b>：「書き出し」のカードで Excel に保存します。「一覧 Excel（閲覧用）」は Tempo を使わない人への報告用です（Tempo には読み込めません）。</p>
+<p><span class="n">2</span><b>Excel から</b>：「読み込み（置き換え）」のカードで Excel を読み込みます。<b>今のプロジェクトのタスクがすべて置き換わります</b>（間違えたら Ctrl+Z）。</p>
 <p><span class="n">3</span><b>バックアップから復元</b>：バックアップのファイル（<code>.backup.json</code>）を選んで元に戻します。ファイルを Tempo の画面にドラッグ＆ドロップしても復元できます。</p>
 <p>バックアップ先の選び方は <a href="#setup">1-5</a> を見てください。</p>
 </div>

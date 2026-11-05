@@ -2,11 +2,12 @@
   --bg:#EEF2F3; --panel:#FFFFFF; --panel2:#F7F9FA; --ink:#1B2730; --ink2:#5B6974; --line:#D6DEE2; --line2:#E9EEF0;
   --accent:#1F6F8B; --accent-ink:#FFFFFF; --weekend:#EEF2F5; --holiday:#FBEDEC; --today:#E0482F;
   --sat:#2F6BB3; --sun:#C8423A; --sel:#E3F0F5;
-  --st-done:#9AA5AC; --st-ok:#2E9460; --st-late:#E08A1E; --st-over:#D0443A; --st-todo:#5C82BE;
-  --font:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --st-done:#7F8A91; --st-ok:#2E9460; --st-late:#C212BB; --orange:#E08A1E; --st-over:#D0443A; --st-todo:#5C82BE;
+  /* fonts on the computer only (v0.0.13): the page works offline and Japanese never falls to a Chinese font. BIZ UD: in Windows since 10; Hiragino: Mac */
+  --font:"BIZ UDPGothic","Yu Gothic UI","Meiryo UI","Hiragino Sans",sans-serif;
+  --mono:"BIZ UDGothic",Consolas,ui-monospace,Menlo,monospace;
   --rh:34px; --lw:540px; --bar:#1B2730; --bar-ink:#E8EEF1; --bar-off:#AEB7BD;
-  --ms-blue:#2F74D0; --ms-red:#D2443A; --ms-green:#3A9A4C; --ms-yellow:#D99A12; --ms-purple:#9057C4;
+  --ms-blue:#2F74D0; --ms-red:#D2443A; --ms-green:#3A9A4C; --ms-yellow:#B98100; --ms-purple:#9057C4;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -14,7 +15,7 @@
     --bg:#101619; --panel:#172026; --panel2:#1B252C; --ink:#E3E9ED; --ink2:#95A3AD; --line:#2B3840; --line2:#212C33;
     --accent:#56A9C6; --accent-ink:#0E1A20; --weekend:#1B262D; --holiday:#2A1F22; --today:#FF6A4D;
     --sat:#7FA8E0; --sun:#F08A82; --sel:#1C3643;
-    --st-done:#6F7C85; --st-ok:#43B07A; --st-late:#EEA040; --st-over:#EC6559; --st-todo:#7C9DD3; --bar-off:#4C5961;
+    --st-done:#6F7C85; --st-ok:#43B07A; --st-late:#E05FD8; --orange:#EEA040; --st-over:#EC6559; --st-todo:#7C9DD3; --bar-off:#4C5961;
   --ms-blue:#6FA3EA; --ms-red:#F07A70; --ms-green:#6CC07C; --ms-yellow:#F0BE4A; --ms-purple:#B78DE3;
   }
 }
@@ -23,12 +24,12 @@
   --bg:#101619; --panel:#172026; --panel2:#1B252C; --ink:#E3E9ED; --ink2:#95A3AD; --line:#2B3840; --line2:#212C33;
   --accent:#56A9C6; --accent-ink:#0E1A20; --weekend:#1B262D; --holiday:#2A1F22; --today:#FF6A4D;
   --sat:#7FA8E0; --sun:#F08A82; --sel:#1C3643;
-  --st-done:#6F7C85; --st-ok:#43B07A; --st-late:#EEA040; --st-over:#EC6559; --st-todo:#7C9DD3; --bar-off:#4C5961;
+  --st-done:#6F7C85; --st-ok:#43B07A; --st-late:#E05FD8; --orange:#EEA040; --st-over:#EC6559; --st-todo:#7C9DD3; --bar-off:#4C5961;
   --ms-blue:#6FA3EA; --ms-red:#F07A70; --ms-green:#6CC07C; --ms-yellow:#F0BE4A; --ms-purple:#B78DE3;
 }
 [hidden]{display:none!important}
 html,body{height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:13px}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:13px;font-variant-numeric:tabular-nums} /* figures of one width: dates and numbers in a column line up and don't shift */
 *{box-sizing:border-box}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -43,7 +44,7 @@ button{cursor:pointer}
    — the motion after Uiverse.io, ClawHack1 "evil-panda-55" (a loader's dots there) */
 .brand i{display:flex;flex-direction:column;gap:2px;width:18px}
 .brand i b{height:3px;border-radius:1px;background:var(--accent)}
-.brand i b:nth-child(2){background:var(--st-late)}
+.brand i b:nth-child(2){background:var(--orange)}
 .brand i b:nth-child(3){background:var(--st-ok)}
 .brand span b{display:inline-block}
 .brand:hover b{animation:swell 1.2s ease-in-out infinite;animation-delay:calc(var(--n,0)*.12s)}
@@ -89,16 +90,22 @@ input[type="range"]{accent-color:var(--accent)}
 .tools .btn{height:28px}
 .spacer{flex:1}
 /* top bar, after Brabio: dark strip with the brand and the open project; storage state, 保存 and 自分 on the right */
-.topbar{display:flex;align-items:center;gap:10px;margin:-12px -16px 0;padding:6px 16px;background:var(--bar);color:var(--bar-ink)}
+.topbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:-12px -16px 0;padding:6px 16px;background:var(--bar);color:var(--bar-ink)}
 .topbar .brand .ver,.topbar .mode{color:#9FB0BA}
 .topbar .mode.warn{color:#F2A33C;font-weight:700} /* a save failed and is being tried again */
+/* v0.0.13: 期間・次の節目・全体進捗 sit in the dark bar, next to the project they are about — one row less above the chart */
+.topbar .stats{color:#9FB0BA;margin-left:4px}
+.topbar .stats b{color:var(--bar-ink)}
+.topbar .meter{background:rgba(255,255,255,.18)}
+.topbar .meter span{background:#56A9C6}
 .topbar #projSel{font-weight:500;max-width:40vw}
+#refSel{max-width:200px} /* as wide as its longest project name otherwise — the row of controls must stay one row (v0.0.13) */
 .topbar select,.topbar .btn{height:26px;color:var(--ink)}
 #meIn{height:26px;width:140px;border:1px solid var(--line);border-radius:8px;padding:0 8px;font:inherit;color:var(--ink);background:var(--panel)}
 /* search: a magnifier inside the box on the left — after Uiverse.io, escannord "hot-yak-44" (picked by the user) */
 .q{position:relative;display:inline-flex;align-items:center}
 .q svg{position:absolute;left:9px;width:14px;height:14px;fill:var(--accent);pointer-events:none}
-#qIn{height:30px;width:210px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:0 8px 0 30px;color:var(--ink);font:inherit;font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s}
+#qIn{height:30px;width:180px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:0 8px 0 30px;color:var(--ink);font:inherit;font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s}
 #qIn:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
 #qIn::placeholder{color:color-mix(in srgb,var(--ink2) 70%,var(--panel))}
 .mode{font-size:11px;color:var(--ink2)}
@@ -141,7 +148,7 @@ input[type="range"]{accent-color:var(--accent)}
 .sw.lock.arm{color:var(--st-over);font-weight:700}
 .ht{position:relative;height:74px;cursor:pointer}
 .ht .band{position:absolute;left:0;right:0;top:50px;height:24px;border-top:1px dashed var(--line2)}
-.ht .band-hint{position:absolute;top:54px;font-size:10.5px;color:var(--ink2);opacity:.7;white-space:nowrap;pointer-events:none}
+.ht .band-hint{position:absolute;top:54px;font-size:11px;color:var(--ink2);opacity:.7;white-space:nowrap;pointer-events:none}
 .flag{position:absolute;top:52px;height:20px;display:flex;align-items:center;gap:3px;padding:0 6px 0 3px;border-radius:3px;font-size:11px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;color:var(--ink);background:color-mix(in srgb,var(--mc) 16%,var(--panel));border:1px solid color-mix(in srgb,var(--mc) 55%,var(--panel));z-index:2}
 .flag svg{flex:none}
 .flag:hover{background:color-mix(in srgb,var(--mc) 28%,var(--panel))}
@@ -150,7 +157,13 @@ input[type="range"]{accent-color:var(--accent)}
 .pop{position:fixed;z-index:25;width:min(340px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:14px;display:flex;flex-direction:column;gap:10px}
 .who .pg{pointer-events:auto;font:inherit;color:var(--ink);background:none;border:1px solid var(--line);border-radius:4px;padding:0 5px;line-height:18px;cursor:pointer}
 .who .pg:hover{background:var(--panel)}
-.aspop{width:auto;max-width:340px;padding:10px}
+.aspop{width:auto;max-width:340px;padding:10px;gap:8px}
+/* the assignee picker (v0.0.13, ui.js openAsPick): a title with how many tasks, × to close; a name only some of the tasks have is outlined (mixed) */
+.ashd{display:flex;align-items:center;gap:8px;min-width:220px;font-size:12px;color:var(--ink2)}
+.asx{margin-left:auto;width:24px;height:24px;border:0;border-radius:5px;background:none;color:var(--ink2);font-size:16px;line-height:1;cursor:pointer}
+.asx:hover{background:var(--panel2);color:var(--ink)}
+.mem .chip[aria-pressed="mixed"]{border-color:var(--accent);color:var(--accent)}
+#asNew{height:28px;border:1px solid var(--line);border-radius:5px;background:var(--panel);padding:0 8px;font-size:12px;color:var(--ink)}
 .pgpop{width:auto;flex-direction:row;align-items:center;padding:8px 10px}
 .pgpop input{width:180px}
 .mem{display:flex;flex-wrap:wrap;gap:6px}
@@ -181,19 +194,17 @@ input[type="range"]{accent-color:var(--accent)}
 .tools .tb:hover:not(:disabled){background:var(--panel2);border-color:var(--line)}
 .tools .tb:disabled{opacity:.3;cursor:default}
 .tools .tb.good{color:var(--st-ok)} .tools .tb.bad{color:var(--st-over)}
+.tools .tb.txt{width:auto;gap:4px;padding:0 8px 0 6px;font-size:12px;font-weight:500} /* the ones used most say what they do (v0.0.13) */
 .tools .tb.bad.arm{background:var(--st-over);color:#fff}
 .tools .sep2{width:1px;height:20px;background:var(--line);margin:0 3px}
 .tools .selinfo{font-size:12px;color:var(--ink2);margin-left:6px}
-.tools .asform{display:flex;align-items:center;gap:6px;margin-left:6px}
-.tools .asform input,.tools .asform select{height:28px;border:1px solid var(--line);border-radius:5px;background:var(--panel);padding:0 8px;font-size:12px}
-.tools .asform .btn{height:28px}
 .links{position:absolute;left:var(--lw);top:0;pointer-events:none;z-index:2;overflow:visible}
 .links path{fill:none;stroke:var(--ink2);stroke-width:1.3}
 .links path.bad{stroke:var(--st-over)}
 .hc{position:absolute;display:flex;align-items:center;justify-content:center;font-size:11px;white-space:nowrap;overflow:hidden;border-left:1px solid var(--line2)}
 .hc.top{top:0;height:25px;justify-content:flex-start;padding-left:6px;font-weight:700;font-size:12px}
 .hc.bot{top:25px;height:25px;font-family:var(--mono);color:var(--ink2);flex-direction:column;line-height:1.05}
-.hc.bot small{font-family:var(--font);font-size:9px}
+.hc.bot small{font-family:var(--font);font-size:11px} /* 11 px at least everywhere (docs/ui-checklist.md) */
 .hc.sat{color:var(--sat)} .hc.sun{color:var(--sun)}
 .hc.today{background:var(--today);color:#fff;border-radius:3px}
 .bgl{position:absolute;top:0;bottom:0;left:var(--lw);width:var(--tw);pointer-events:none;z-index:0}
@@ -221,8 +232,11 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .row.parent .tn{font-weight:700}
 .c-as{width:130px;color:var(--ink2);font-size:12px}
 .row .c-as{display:flex;align-items:center;align-self:stretch}
-.asbox{display:flex;align-items:center;gap:4px;width:100%;min-width:0;height:24px;padding:0 6px;border:1px solid var(--line);border-radius:5px;background:var(--panel);font:inherit;font-size:12px;color:var(--ink);cursor:pointer}
+.asbox{display:flex;align-items:center;gap:4px;width:100%;min-width:0;height:24px;padding:0 6px;border:1px solid transparent;border-radius:5px;background:none;font:inherit;font-size:12px;color:var(--ink);cursor:pointer}
 .asbox:hover,.asbox:focus-visible{border-color:var(--accent)}
+/* the 担当 cell reads as a name (v0.0.13); its box shows on the row under the mouse or selected */
+.row:hover .asbox:not(:hover),.row.sel .asbox:not(:hover){border-color:var(--line);background:var(--panel)}
+.asbox b{visibility:hidden}.row:hover .asbox b,.row.sel .asbox b,.asbox:focus-visible b{visibility:visible}
 .asbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
 .asbox.none span,.asbox b{color:var(--ink2);font-weight:400}
 .c-d{width:50px;font-family:var(--mono);font-size:12px;text-align:right}
@@ -236,6 +250,7 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .chart.list .corner>div{padding-top:8px}
 .chart.list .c-id{display:block;width:120px;font-family:var(--mono);font-size:12px;color:var(--ink2);-webkit-user-select:text;user-select:text;cursor:text}
 .chart.list .c-st{display:block;width:80px;font-size:12px}
+.c-st .dot{display:inline-block;margin:0 5px 1px 0;vertical-align:middle} /* the status in its color, as in front of the names (v0.0.13) */
 /* the ID column is folded by default: a narrow strip with only the ▸ button in the header */
 .chart.list .corner .c-id{display:flex;align-items:center;gap:4px;cursor:default}
 .chart.list.noid .c-id{width:30px;padding-left:6px!important;padding-right:0}
@@ -285,7 +300,7 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .bar .fill{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--c) 70%,var(--panel))}
 .bar .offd{position:absolute;top:0;bottom:0;margin-left:-1px;background:var(--bar-off);opacity:.85;pointer-events:none} /* days off on the bar (view.js offSegs); -1px: the bar's border */
 .bar.sum .offd{margin-left:0}
-.c-d .half{font-size:9px;margin-left:1px;color:var(--ink2)} /* ½ = a half day (午後から / 午前まで) */
+.c-d .half{font-size:11px;margin-left:1px;color:var(--ink2)} /* ½ = a half day (午後から / 午前まで) */
 .bar .bl{position:absolute;left:6px;right:6px;top:0;line-height:18px;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);pointer-events:none}
 .bar .h{position:absolute;top:0;bottom:0;width:7px;cursor:ew-resize}
 .bar .h.l{left:0} .bar .h.r{right:0}
@@ -301,8 +316,23 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .bar.sum .fill{background:var(--ink2)}
 .ms{--c:var(--st-todo);position:absolute;top:10px;width:14px;height:14px;transform:rotate(45deg);background:var(--c);cursor:grab;touch-action:none;border-radius:2px}
 .who{position:absolute;top:0;line-height:var(--rh);font-size:11px;color:var(--ink2);white-space:nowrap;pointer-events:none}
+.who.gone{visibility:hidden} /* its bar has scrolled away to the left: half a label tells nothing (v0.0.13, ui.js whoGone) */
 .st-done{--c:var(--st-done)} .st-ok{--c:var(--st-ok)} .st-late{--c:var(--st-late)} .st-over{--c:var(--st-over)} .st-todo{--c:var(--st-todo)}
 .addrow .lc{color:var(--accent);font-weight:500}
+/* ? beside the status chips: what the bar and status colors mean, on hover / focus (v0.0.13) */
+.lg{position:relative;display:inline-flex}
+.lg>button{width:22px;height:22px;border:1px solid var(--line);border-radius:50%;background:var(--panel);color:var(--ink2);font-size:12px;font-weight:700;padding:0;cursor:help}
+.lg>button:hover,.lg>button:focus-visible{border-color:var(--accent);color:var(--accent)}
+.legend{display:none;position:absolute;top:calc(100% + 6px);left:-8px;z-index:30;width:330px;padding:12px;gap:6px;flex-direction:column;font-size:12px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18)}
+.lg>button:hover+.legend,.lg>button:focus+.legend{display:flex}
+.legend b{font-size:12px;margin-top:4px}.legend b:first-child{margin-top:0}
+.legend div{display:flex;align-items:center;gap:8px}
+.legend .lgb{flex:none;width:44px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.25)}
+.lgb.on{background:linear-gradient(#0163F7,#0148CA)}
+.lgb.late{background:linear-gradient(to left,#C212BB,transparent),linear-gradient(#0163F7,#0148CA)}
+.lgb.over{background:linear-gradient(to left,#F5D90A,transparent),linear-gradient(#E8262B,#C41A1A)}
+.lgb.done{background:color-mix(in srgb,var(--st-done) 40%,var(--panel))}
+.legend .dot{display:inline-block}.legend .hint{font-size:11px}
 /* overlay (v0.0.10, view.js refRows): another project under this one, read-only — a heading row, then its rows faded; nothing to grab */
 .row.refhd{border-top:2px solid var(--line)}
 .row.refhd .lc{background:var(--panel2);cursor:default}
@@ -330,6 +360,7 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .drawer label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink2)}
 .drawer input:not([type=checkbox]):not([type=range]),.drawer textarea{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:6px 8px;color:var(--ink);font-size:13px}
 .drawer label.chk{flex-direction:row;align-items:center;gap:6px;color:var(--ink)}
+.fas{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--ink2)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .hint{font-size:12px;color:var(--ink2)}
 .drawer #f-par{flex-direction:row;align-items:center;gap:8px;padding:6px 8px;border-left:3px solid var(--accent);border-radius:3px;background:color-mix(in srgb,var(--accent) 14%,var(--panel));color:var(--ink);font-size:13px;font-weight:500} /* where the task sits: must stand out */
@@ -339,12 +370,21 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .drawer .memo:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
 .memo .dots{display:flex;gap:4px;padding:8px 8px 2px}
 .memo .dots i{width:12px;height:12px;border-radius:50%;background:var(--accent)}
-.memo .dots i:nth-child(2){background:var(--st-late)}
+.memo .dots i:nth-child(2){background:var(--orange)}
 .memo .dots i:nth-child(3){background:var(--ms-purple)}
 .drawer .memo textarea{border:0;background:none;outline:0;resize:vertical;min-height:60px}
 .order{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);flex-wrap:wrap}
 .order .btn{height:28px;padding:0 10px}
-.drawer .pj{display:contents}.drawer .pj[hidden]{display:none} /* project-only part of 設定 */
+/* 設定 (v0.0.13): cards — this project / this PC / 書き出し / 読み込み; .pj = the parts only there with a project open */
+.drawer span.pj{display:contents}
+.drawer .card{display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
+.drawer .card h3{margin:0;padding:0;border:0;font-size:13px}
+.drawer .card input:not([type=checkbox]):not([type=range]){background:var(--panel)}
+.frow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--ink2)}
+.frow b{min-width:76px;font-weight:500;color:var(--ink)}
+.frow .seg button{padding:0 8px}
+.frow .hint{flex:1;min-width:0}
+.frow .btn{height:28px;padding:0 10px}
 .drawer footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .btn.danger{color:var(--st-over);border-color:color-mix(in srgb,var(--st-over) 50%,var(--line))}
 .btn.danger.arm{background:var(--st-over);color:#fff}

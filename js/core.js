@@ -125,7 +125,7 @@ function undo(redo){
   const p=projects[curId];if(!p||readOnly)return;log(redo?"redo":"undo",{p:p.id});const h=H(p.id),from=redo?h.r:h.u,to=redo?h.u:h.r;
   if(!from.length){toast(redo?"やり直す操作がありません":"元に戻す操作がありません");return}
   to.push(h.last);const s=JSON.parse(from.pop());p.name=s.name;p.tasks=s.tasks;p.milestones=s.milestones;p.holidays=s.holidays;p.members=s.members||undefined;
-  closeDrawer();$("asForm").hidden=true;delArmed=false;restoring=true;save(p);restoring=false;toast(redo?"やり直しました":"元に戻しました");
+  closeDrawer();if(asEdit){$("asPop").hidden=true;asEdit=null}delArmed=false;restoring=true;save(p);restoring=false;toast(redo?"やり直しました":"元に戻しました");
 }
 // what a save changed, for the log: the ids of the tasks added and removed, for a changed task its id and the names of the fields — no values
 function changes(a,b){const A=JSON.parse(a),B=JSON.parse(b),by=Object.fromEntries(A.tasks.map(t=>[t.id,t])),now=new Set(B.tasks.map(t=>t.id)),js=JSON.stringify,cap=x=>x.length>30?[...x.slice(0,30),"+"+(x.length-30)]:x,o={};
@@ -167,4 +167,5 @@ function onData(all){
   if(!projects[curId])curId=Object.keys(projects)[0]||null;
   if(!busy())render();
 }
-function toast(msg){document.querySelectorAll(".toast").forEach(x=>x.remove());const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
+// a short message at the bottom: read out by screen readers (role=status); a long one stays longer so it can be read through (v0.0.13: 3 s / 5 s)
+function toast(msg){document.querySelectorAll(".toast").forEach(x=>x.remove());const t=document.createElement("div");t.className="toast";t.setAttribute("role","status");t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),msg.length>30?5000:3000)}

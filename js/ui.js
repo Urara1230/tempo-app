@@ -1,6 +1,6 @@
 // Interactions: drawer forms, members, milestones, popups, context menu, drag & drop, selection, toolbar, keyboard.
 /* ---------- actions ---------- */
-function setCur(id){log("project",{p:id});if(sh.mine&&sh.mine!==id)shEnd();lkArmed=false;lkWas="";view.q=$("qIn").value="";curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
+function setCur(id){leaveTask();log("project",{p:id});if(sh.mine&&sh.mine!==id)shEnd();lkArmed=false;lkWas="";view.q=$("qIn").value="";curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
 function newProject(){
   if(storeRO)return;
   const id=uid();projects[id]={id,name:"新しいプロジェクト",tasks:[]};setCur(id);save(projects[id]);openProject();
@@ -10,6 +10,7 @@ const setTgl=()=>$("projSet").setAttribute("aria-expanded",!$("projForm").hidden
 function closeDrawer(){drawer.hidden=true;$("taskForm").hidden=true;$("projForm").hidden=true;setTgl();if(editingId){editingId=null;render()}}
 function armReset(){document.querySelectorAll(".danger").forEach(b=>{b.classList.remove("arm");b.textContent=b.id==="projDel"?"このプロジェクトを削除":"削除"})}
 function openTask(id){
+  if(editingId!==id)leaveTask(); // another task: what was changed in the panel is saved first
   const p=projects[curId],all=derive(p),r=all.find(x=>x.id===id);if(!r)return;
   editingId=id;armReset();
   drawer.hidden=false;$("projForm").hidden=true;$("taskForm").hidden=false;setTgl();
@@ -45,10 +46,10 @@ function syncForm(){
 const formH=(s,e)=>{const a=2*D(s)+($("f-sh").value==="pm"?1:0);return[a,Math.max(a,2*D(e)+($("f-eh").value==="am"?0:1))]}; // the panel's dates as half-day slots: an afternoon start with a morning end on one day = that afternoon
 function bizHint(){const s=$("f-s").value,e=$("f-e").value;if(!s||!e)return"";if(e<s)return"終了日が開始日より前です";return`${bizH(...formH(s,e))} 営業日（土日祝・会社の休日を除く）`}
 function openProject(){
-  const p=projects[curId];armReset();
+  leaveTask();const p=projects[curId];armReset();
   drawer.hidden=false;$("taskForm").hidden=true;$("projForm").hidden=false;setTgl();
   document.querySelectorAll("#projForm .pj").forEach(e=>e.hidden=!p);$("projDel").hidden=!p; // without a project: only this PC's folders and ＋ プロジェクト
-  bkInfo();shInfo();if(!p)return;$("p-name").value=p.name||"";$("p-json").value=JSON.stringify({name:p.name,members:roster(p),tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[]},null,1);rosterChips();
+  bkInfo();shInfo();thInfo();if(!p)return;$("p-name").value=p.name||"";$("p-json").value=JSON.stringify({name:p.name,members:roster(p),tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[]},null,1);rosterChips();
 }
 $("f-s").addEventListener("input",()=>{if($("f-e").value<$("f-s").value)$("f-e").value=$("f-s").value;$("f-biz").textContent=bizHint()});
 ["f-e","f-sh","f-eh"].forEach(k=>$(k).addEventListener("input",()=>$("f-biz").textContent=bizHint()));
@@ -56,7 +57,8 @@ $("f-p").addEventListener("input",()=>$("f-po").textContent=$("f-p").value+"%");
 /* member roster: kept per project, picked from in the task form */
 function memChips(){const p=projects[curId],cur=names($("f-as").value);
   $("f-mem").innerHTML=[...new Set([...roster(p),...cur])].map(n=>`<button type="button" class="chip" data-mem="${esc(n)}" aria-pressed="${cur.includes(n)}">${esc(n)}</button>`).join("")}
-$("f-as").addEventListener("input",memChips);
+// a name off the roster: typed below the names and added with Enter (v0.0.13 — the names are the way to pick; f-as holds the list)
+$("f-asNew").addEventListener("keydown",e=>{if(e.key!=="Enter")return;e.preventDefault();$("f-as").value=[...new Set([...names($("f-as").value),...names(e.target.value)])].join("、");e.target.value="";memChips()});
 $("f-mem").addEventListener("click",e=>{const b=e.target.closest("[data-mem]");if(!b)return;const n=b.dataset.mem,cur=names($("f-as").value);
   $("f-as").value=(cur.includes(n)?cur.filter(x=>x!==n):[...cur,n]).join("、");memChips()});
 function rosterChips(){const p=projects[curId];
@@ -67,8 +69,12 @@ $("p-memAdd").addEventListener("click",addMembers);
 $("p-mem").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addMembers()}});
 $("p-mems").addEventListener("click",e=>{const b=e.target.closest("[data-rm]");if(!b||readOnly)return;const p=projects[curId];
   p.members=roster(p).filter(n=>n!==b.dataset.rm);save(p);rosterChips()}); // tasks keep their assignees
-$("taskForm").addEventListener("submit",e=>{
-  e.preventDefault();const p=projects[curId];const t=p&&p.tasks.find(x=>x.id===editingId);if(!t||readOnly)return;
+$("taskForm").addEventListener("submit",e=>{e.preventDefault();if(saveTask()!==false){toast("保存しました");closeDrawer()}});
+// leaving the task panel any other way (完了, Esc, another task, another project, 設定) saves what was changed in it (v0.0.13) — nothing is lost, Ctrl+Z undoes it
+const taskDirty=()=>!$("taskForm").hidden&&!!editingId&&(FF.some(([k])=>fval(k)!==formInit[k])||icoN(fIcon)!==fIcon0);
+function leaveTask(){if(readOnly||!taskDirty())return;if(saveTask()!==false)toast("保存しました（Ctrl+Z で元に戻せます）")}
+function saveTask(){
+  const p=projects[curId];const t=p&&p.tasks.find(x=>x.id===editingId);if(!t||readOnly)return false;
   t.name=$("f-name").value.trim()||"無題";
   t.assignees=names($("f-as").value);
   if(!$("f-s").disabled){let s=$("f-s").value||t.start,en=$("f-e").value||t.end;if(en<s)en=s;setH(t,...formH(s,en));t.progress=+$("f-p").value;t.milestone=$("f-ms").checked;setDv(t,$("f-dv").checked)}
@@ -77,8 +83,8 @@ $("taskForm").addEventListener("submit",e=>{
   // 親 changed: move under it (after its children); （なし） = top level, right after the top-level task it was under. moveBlock saves — one undo step with the fields
   const pa=$("f-pa").value,top=()=>{const ts=p.tasks;let i=ts.indexOf(t);while(ts[i].level>0)i--;return ts[i].id};
   if(pa===formInit["f-pa"]||!moveBlock(p,[t.id],pa||top(),pa?"in":"after"))save(p);
-  toast("保存しました");closeDrawer();
-});
+  FF.forEach(([k])=>formInit[k]=fval(k));fIcon0=icoN(fIcon); // saved: what is in the panel now is no longer a change
+}
 /* icon in the task panel (v0.0.12): fIcon = the icon as 保存 will write it (null = none), fIcon0 = as it was. A picture dropped on the box, or picked by
    clicking the empty box, goes into the shared folder's images/ at once (storage.js imgPut); one from the list is there already. Drag in the box = move, wheel = zoom */
 let fIcon=null,fIcon0="",fPar=false,icoDrag=null;
@@ -117,7 +123,10 @@ $("taskDel").addEventListener("click",e=>{
   const b=e.currentTarget;if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="もう一度押すと削除";return}
   const p=projects[curId];p.tasks=p.tasks.filter(t=>t.id!==editingId);save(p);closeDrawer();toast("削除しました");
 });
-$("projForm").addEventListener("submit",e=>{e.preventDefault();const p=projects[curId];if(readOnly)return;p.name=$("p-name").value.trim()||"無題";save(p);toast("保存しました");closeDrawer()});
+$("projForm").addEventListener("submit",e=>e.preventDefault());
+// project name (v0.0.13): saved when it is left (Enter or a click elsewhere) — no button of its own
+$("p-name").addEventListener("change",()=>{const p=projects[curId];if(!p||readOnly)return;const v=$("p-name").value.trim()||"無題";if(v!==p.name){p.name=v;save(p);toast("プロジェクト名を保存しました")}});
+$("p-name").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();e.target.blur()}});
 $("p-copy").addEventListener("click",()=>{const v=$("p-json").value;navigator.clipboard.writeText(v).then(()=>toast("コピーしました"),()=>{$("p-json").select();toast("選択しました。Ctrl+C でコピーしてください")})});
 /* replace the current project's tasks (and milestones / members / name when given); shared by JSON and Excel import */
 // xl: from Excel, which has no icons — a task keeps the icon it has now (same ID). An icon is kept only with a picture name that can be looked up (IMGF)
@@ -129,7 +138,7 @@ function replaceData(d,xl){
   if(Array.isArray(d.members))p.members=d.members.map(String);
   if(Array.isArray(d.holidays))p.holidays=d.holidays.filter(h=>h&&isDay(h.date)).map(h=>({date:h.date,color:isHex(h.color)?h.color:HOLC}));
   if(d.name)p.name=String(d.name);save(p);closeDrawer();
-  const bad=tasks.length-p.tasks.length;toast(`${p.tasks.length} 件のタスクを読み込みました`+(bad?`（${bad} 件は名前か日付が正しくないため読み込みませんでした）`:""));
+  const bad=tasks.length-p.tasks.length;toast(`${p.tasks.length} 件のタスクを読み込みました`+(bad?`（${bad} 件は名前か日付が正しくないため読み込みませんでした）`:"")+"。Ctrl+Z で元に戻せます");
 }
 $("p-import").addEventListener("click",()=>{
   try{replaceData(JSON.parse($("p-json").value))}catch(err){toast("JSONを読み取れませんでした。形式を確認してください")}
@@ -184,7 +193,8 @@ function bkInfo(){
   $("bk-info").textContent=!window.showDirectoryPicker?"Chrome / Edge で使えます"
     :!bk.dir?"未設定"
     :!bk.ok?`「${bk.dir.name}」　次の編集時に許可を確認`
-    :`「${bk.dir.name}」　自動 ${bk.last||"—"}　手動 ${bk.saved||"—"}`}
+    :`✓ 「${bk.dir.name}」　自動 ${bk.last||"—"}　手動 ${bk.saved||"—"}`;
+  $("bk-pick").textContent=bk.dir?"変更":"保存先フォルダを選ぶ"} // set: the button only changes it
 async function pickDir(){const d=await showDirectoryPicker({id:"tempo-backup",mode:"readwrite"});if(sh.dir&&await sh.dir.isSameEntry(d))throw Object.assign(new Error("same"),{code:"same"});bk.dir=d;bk.ok=true;bk.asked=true;await kv("readwrite",s=>s.put(bk.dir,"bkDir"))}
 $("bk-pick").addEventListener("click",async()=>{
   try{await pickDir();backupSoon();bkInfo();toast("バックアップ先を設定しました")}
@@ -228,9 +238,10 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!dropPop.hidden)clo
 /* shared folder (storage.js): pick it, move the open project there, copy a shared one back as a separate local project */
 function shInfo(){const p=projects[curId],on=store===backends.local&&!!window.showDirectoryPicker;
   $("sh-row").hidden=$("sh-info").hidden=!on;$("sh-proj").hidden=!on||!p;$("sh-move").hidden=!p||!!p.shared||!sh.dir;$("sh-copy").hidden=!p?.shared;
-  $("sh-where").textContent=p?.shared?"保存場所：共有フォルダ":"保存場所：このブラウザ";
+  $("sh-where").textContent=p?.shared?"共有フォルダ":"このブラウザ";
   $("sh-info").textContent=location.host?"共有ドライブ上の Tempo.html を直接開いています。共有フォルダを使うには Tempo.bat から開いてください" // page opened from a network path: Chrome won't let it use folders
-    :!sh.dir?"未設定":`「${sh.dir.name}」　共有プロジェクト ${Object.keys(sh.data).length} 件`;
+    :!sh.dir?"未設定":`${sh.ok?"✓ ":""}「${sh.dir.name}」　共有プロジェクト ${Object.keys(sh.data).length} 件`;
+  $("sh-pick").textContent=sh.dir?"変更":"フォルダを選ぶ";
   $("sh-path").hidden=!on||!sh.dir||!sh.path;$("sh-path").textContent=sh.path}
 $("sh-pick").addEventListener("click",async()=>{try{await shPick();shInfo();render();const n=Object.keys(sh.data).length;
     toast(n?`共有フォルダを設定しました。共有プロジェクト ${n} 件は上のプロジェクト一覧（👥）から開けます`:"共有フォルダを設定しました（共有プロジェクトはまだありません）")}
@@ -245,11 +256,15 @@ $("projDel").addEventListener("click",e=>{
   const b=e.currentTarget;if(readOnly)return;if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="もう一度押すと完全に削除";return}
   const id=curId;delete projects[id];queue(id);closeDrawer();setCur(Object.keys(projects)[0]||null);toast("プロジェクトを削除しました");
 });
-drawer.addEventListener("click",e=>{if(e.target.closest("[data-close]"))closeDrawer()});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!drawer.hidden)closeDrawer()});
+drawer.addEventListener("click",e=>{if(e.target.closest("[data-close]")){leaveTask();closeDrawer()}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!drawer.hidden){leaveTask();closeDrawer()}});
 
-$("projSel").addEventListener("change",e=>setCur(e.target.value));
-$("projNew").addEventListener("click",newProject);
+// screen colors (v0.0.13): light unless picked otherwise — mg.theme = light / dark / os (follow Windows / Chrome), this browser only. Tempo.html's <head> applies it before drawing
+const theme=()=>["dark","os"].includes(ls.get("mg.theme"))?ls.get("mg.theme"):"light";
+const thInfo=()=>document.querySelectorAll("[data-th]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.th===theme()));
+$("thSeg").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;const t=b.dataset.th;ls.set("mg.theme",t);
+  if(t==="os")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;thInfo()});
+$("projSel").addEventListener("change",e=>{if(e.target.value!=="+new")return setCur(e.target.value);e.target.value=curId||"";newProject()}); // the list's last line: ＋ 新しいプロジェクト (v0.0.13; was in 設定)
 $("projSet").addEventListener("click",()=>$("projForm").hidden?openProject():closeDrawer()); // it shows a cross while open: pressing it again closes
 const setMe=v=>{me=v;ls.set("mg.me",me);render()};
 $("meSel").addEventListener("change",e=>{const s=e.target;if(!s.selectedOptions[0].hasAttribute("data-in"))return setMe(s.value);s.hidden=true;const i=$("meIn");i.hidden=false;i.value=me;i.focus();i.select()}); // 名前を入力…: a name off the roster, so a newcomer can take the lock and add themselves
@@ -303,6 +318,7 @@ $("msDel").addEventListener("click",e=>{const b=e.currentTarget;if(!b.classList.
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!pop.hidden)closeMs()});
 document.addEventListener("pointerdown",e=>{if(!pop.hidden&&!pop.contains(e.target)&&!e.target.closest("#ht"))closeMs()});
 const chart=$("chart");
+let whoT=0;chart.addEventListener("scroll",()=>{if(!whoT)whoT=requestAnimationFrame(()=>{whoT=0;whoGone()})},{passive:true});
 chart.addEventListener("click",e=>{
   if(e.target.closest("[data-pg]"))return;
   if(e.target.closest("[data-ids]")){view.ids=!view.ids;ls.set("mg.ids",view.ids?"1":"");render();return} // 一覧: fold / unfold the ID column
@@ -318,7 +334,7 @@ chart.addEventListener("click",e=>{
     else if(!lkArmed){lkArmed=true;render()}
     else{lkArmed=false;shForce(id).then(()=>{render();toast("ロックを解除しました")},()=>toast("ロックを解除できませんでした"))}
     return}
-  const as=e.target.closest("[data-as]");if(as){asEdit&&asEdit.id===as.dataset.as?closeAsPick():openAsPick(as);return}
+  const as=e.target.closest("[data-as]");if(as){asEdit&&asEdit.at===as.dataset.as?closeAsPick():openAsPick(as);return}
   const fl=e.target.closest("[data-ms]");if(fl){openMs(null,fl.dataset.ms,e.clientX,e.clientY);return}
   const ht=e.target.closest("#ht");if(ht&&range){const n=range.a+Math.floor((e.clientX-ht.getBoundingClientRect().left)/range.dw);if(n>=range.a&&n<=range.b)openMs(S(n),null,e.clientX,e.clientY);return}
   if(e.target.closest("[data-act=newproj]"))return newProject();
@@ -330,20 +346,32 @@ chart.addEventListener("click",e=>{
 
 // just under the anchor, or above it when there is no room below
 const below=(r,el)=>r.bottom+6+el.offsetHeight>innerHeight-8?Math.max(8,r.top-6-el.offsetHeight):r.bottom+6;
-/* assignee picker on the 担当 cell: pick from the roster, saved as one step on close */
+/* assignee picker (v0.0.13): on a 担当 cell — for all the selected tasks when that row is one of them — or from the toolbar's 担当者を追加 / 外す.
+   A click on a name adds it, or takes it off when every task has it (追加: adds only, 外す: takes off only); a name off the roster is typed below.
+   The box stays open for more names until ×, Esc or a click elsewhere; saved then, as one undo step. Parents (their 担当 is the sum) are left out */
 const asPop=$("asPop");let asEdit=null;
-const asTask=()=>{const p=projects[curId];return p&&asEdit&&p.tasks.find(t=>t.id===asEdit.id)};
-function openAsPick(el){closeAsPick();const t=projects[curId].tasks.find(x=>x.id===el.dataset.as);if(!t||readOnly)return;
-  asEdit={id:t.id,a0:JSON.stringify(t.assignees||[])};paintAsPick();asPop.hidden=false;
+const asTasks=()=>{const p=projects[curId];return p&&asEdit?p.tasks.filter(t=>asEdit.ids.includes(t.id)):[]};
+const asNames=()=>{const cur=[...new Set(asTasks().flatMap(t=>t.assignees||[]))];return asEdit.mode==="del"?cur:[...new Set([...roster(projects[curId]),...cur])]};
+function openAsPick(el,mode="tg"){closeAsPick();const p=projects[curId];if(!p||readOnly)return;const par=new Set(derive(p).filter(r=>r.parent).map(r=>r.id));
+  const one=el.dataset.as,ids=(one&&!(sel.has(one)&&sel.size>1)?[one]:[...sel]).filter(id=>!par.has(id));
+  asEdit={ids,mode,at:one||""};const ts=asTasks();
+  if(!ts.length||mode==="del"&&!asNames().length){asEdit=null;toast(ts.length?"選択中のタスクに担当者がいません":"子タスクのないタスクを選んでください");return}
+  asEdit.a0=JSON.stringify(ts.map(t=>t.assignees||[]));paintAsPick();asPop.hidden=false;
   const r=el.getBoundingClientRect();asPop.style.left=Math.max(16,Math.min(r.left,innerWidth-asPop.offsetWidth-16))+"px";asPop.style.top=below(r,asPop)+"px";
-  asPop.querySelector("button")?.focus()}
-function paintAsPick(){const p=projects[curId],cur=asTask().assignees||[];
-  $("asMem").innerHTML=[...new Set([...roster(p),...cur])].map(n=>`<button type="button" class="chip" data-pick="${esc(n)}" aria-pressed="${cur.includes(n)}">${esc(n)}</button>`).join("")||`<span class="hint">「設定」でメンバーを登録してください</span>`}
-$("asMem").addEventListener("click",e=>{const b=e.target.closest("[data-pick]"),t=asTask();if(!b||!t)return;const n=b.dataset.pick,cur=t.assignees||[];
-  t.assignees=cur.includes(n)?cur.filter(x=>x!==n):[...cur,n];paintAsPick();render()});
-function closeAsPick(){if(!asEdit)return;const t=asTask(),changed=t&&JSON.stringify(t.assignees||[])!==asEdit.a0;asPop.hidden=true;asEdit=null;if(changed)save(projects[curId])}
+  ($("asMem").querySelector("button")||$("asNew")).focus()}
+function paintAsPick(){const ts=asTasks(),n=ts.length,m=asEdit.mode;
+  $("asHd").textContent=(m==="add"?"担当者を追加":m==="del"?"担当者を外す":"担当者")+(n>1?`（${n} 件のタスク）`:"");
+  $("asMem").innerHTML=asNames().map(x=>{const k=ts.filter(t=>(t.assignees||[]).includes(x)).length;return`<button type="button" class="chip" data-pick="${esc(x)}" aria-pressed="${m==="del"?"false":k===n?"true":k?"mixed":"false"}">${esc(x)}</button>`}).join("")
+    ||`<span class="hint">${m==="del"?"担当者がいません":"「設定」でメンバーを登録するか、下に名前を入力してください"}</span>`;
+  $("asNew").hidden=m==="del"}
+function asPick(n,how){const ts=asTasks(),off=how==="del"||how==="tg"&&ts.every(t=>(t.assignees||[]).includes(n));
+  ts.forEach(t=>{const cur=t.assignees||[];t.assignees=off?cur.filter(x=>x!==n):cur.includes(n)?cur:[...cur,n]});paintAsPick();render()}
+$("asMem").addEventListener("click",e=>{const b=e.target.closest("[data-pick]");if(b&&asEdit)asPick(b.dataset.pick,asEdit.mode)});
+$("asNew").addEventListener("keydown",e=>{if(e.key!=="Enter"||!asEdit)return;e.preventDefault();names(e.target.value).forEach(n=>asPick(n,"add"));e.target.value=""});
+$("asX").addEventListener("click",()=>closeAsPick());
+function closeAsPick(){if(!asEdit)return;const changed=JSON.stringify(asTasks().map(t=>t.assignees||[]))!==asEdit.a0;asPop.hidden=true;asEdit=null;if(changed)save(projects[curId])}
 document.addEventListener("pointerdown",e=>{if(asEdit&&!asPop.contains(e.target)&&!e.target.closest("[data-as]"))closeAsPick()});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&asEdit)closeAsPick()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&asEdit){closeAsPick();e.stopImmediatePropagation()}}); // Esc closes the box only — the selection it works on stays
 
 /* progress popup on the bar label */
 const pgPop=$("pgPop");let pgEdit=null;
@@ -547,7 +575,7 @@ function cmd(c){
     case"undo":case"redo":{undo(c==="redo");return}
     case"edit":{if(idx.length===1)openTask(ts[first].id);return}
     case"bulk":{if(idx.length===1)openBulk(ts[first].id);return}
-    case"asAdd":case"asDel":{openAs(c);return}
+    case"asAdd":case"asDel":{openAsPick(document.querySelector(`#tools [data-cmd="${c}"]`),c==="asAdd"?"add":"del");return}
     case"del":{if(!idx.length)return;if(!delArmed){delArmed=true;renderTools();return}
       const kill=new Set();topBlocks(p).forEach(i=>{for(let k=i;k<=blockEnd(ts,i);k++)kill.add(ts[k].id)});
       p.tasks=ts.filter(t=>!kill.has(t.id));p.tasks.forEach(t=>{if(t.deps)t.deps=t.deps.filter(d=>!kill.has(d))});
@@ -555,19 +583,6 @@ function cmd(c){
   }
 }
 $("tools").addEventListener("click",e=>{const b=e.target.closest("[data-cmd]");if(b&&!b.disabled)cmd(b.dataset.cmd)});
-let asMode=null;
-function openAs(m){const p=projects[curId];asMode=m;$("asForm").hidden=false;
-  const names=[...new Set(selIdx(p).flatMap(i=>p.tasks[i].assignees||[]))];
-  $("asLbl").textContent=m==="asAdd"?"担当者を追加：":"外す担当者：";$("asIn").hidden=m!=="asAdd";$("asSel").hidden=m==="asAdd";
-  $("asSel").innerHTML=names.map(n=>`<option>${esc(n)}</option>`).join("");$("asOk").textContent=m==="asAdd"?"追加":"外す";
-  if(m==="asDel"&&!names.length){$("asForm").hidden=true;toast("選択中のタスクに担当者がいません");return}
-  $("asIn").value="";setTimeout(()=>(m==="asAdd"?$("asIn"):$("asSel")).focus(),20);}
-$("asCancel").addEventListener("click",()=>{$("asForm").hidden=true});
-$("asForm").addEventListener("submit",e=>{e.preventDefault();const p=projects[curId];
-  if(asMode==="asAdd"){const add=names($("asIn").value);if(!add.length)return;
-    selIdx(p).forEach(i=>{const t=p.tasks[i];t.assignees=[...new Set([...(t.assignees||[]),...add])]})}
-  else{const n=$("asSel").value;selIdx(p).forEach(i=>{const t=p.tasks[i];t.assignees=(t.assignees||[]).filter(a=>a!==n)})}
-  $("asForm").hidden=true;save(p);toast("担当者を更新しました")});
 document.addEventListener("keydown",e=>{
   if(e.target.closest("input,textarea,select")||!drawer.hidden||!pop.hidden||!bulkPop.hidden||!dropPop.hidden||!ctx.hidden||asEdit||pgEdit||!sel.size)return; // a popup is open: Tab / Enter / Delete belong to it
   const k=e.key,mod=e.ctrlKey||e.metaKey;
