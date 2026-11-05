@@ -279,6 +279,15 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .who{position:absolute;top:0;line-height:var(--rh);font-size:11px;color:var(--ink2);white-space:nowrap;pointer-events:none}
 .st-done{--c:var(--st-done)} .st-ok{--c:var(--st-ok)} .st-late{--c:var(--st-late)} .st-over{--c:var(--st-over)} .st-todo{--c:var(--st-todo)}
 .addrow .lc{color:var(--accent);font-weight:500}
+/* overlay (v0.0.10, view.js refRows): another project under this one, read-only — a heading row, then its rows faded; nothing to grab */
+.row.refhd{border-top:2px solid var(--line)}
+.row.refhd .lc{background:var(--panel2);cursor:default}
+.row.refhd small{color:var(--ink2);font-size:11px;white-space:nowrap}
+.row.refhd .flag{top:7px;cursor:default}
+.row.ref .lc{cursor:default} .row.ref:not(.pc) .lc:hover{background:var(--panel)}
+.row.ref .tn{color:var(--ink2)}
+.row.ref .tl>*{opacity:.55}
+.row.ref .bar,.row.ref .ms{cursor:default}
 .empty{padding:48px 24px;text-align:center;color:var(--ink2);display:flex;flex-direction:column;align-items:center;gap:12px}
 /* 読み込み中: a thin ring turning — after Uiverse.io, Fernando-sv "quiet-zebra-41" */
 .spin{width:22px;height:22px;border:3px solid var(--line);border-left-color:transparent;border-radius:50%;animation:spin 1s linear infinite}

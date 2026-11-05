@@ -18,6 +18,8 @@ function renderToolbar(){
   document.querySelectorAll("[data-scale]").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.scale===view.scale);b.disabled=view.list});$("todayBtn").disabled=view.list; // no timeline in 一覧
   document.querySelectorAll("[data-view]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.view==="list")===view.list));
   $("leafBtn").setAttribute("aria-pressed",view.leaf); // 一覧 and the chart alike (v0.0.9; until then 一覧 only)
+  const rp=refOf();$("refSel").disabled=view.list||!p; // the overlay is in the chart only
+  $("refSel").innerHTML=`<option value="">重ねて表示：なし</option>`+ids.filter(id=>id!==curId).map(id=>`<option value="${esc(id)}"${projects[id]===rp?" selected":""}>重ねて表示：${projects[id].shared?"👥 ":""}${esc(projects[id].name||"無題")}</option>`).join("");
   const shLbl=!p?.shared?"":!sh.dir?"共有フォルダが未設定です（閲覧のみ）":!sh.ok?"共有フォルダ：画面をクリックすると接続します（閲覧のみ）"
     :sh.err?`共有フォルダに接続できません（最終取得 ${sh.at?new Date(sh.at).toTimeString().slice(0,5):"—"}）`
     :sh.newVer?`新しいバージョン ${sh.newVer} があります。Tempo.bat から開き直してください（それまで閲覧のみ）`:"共有フォルダと同期中";
@@ -54,6 +56,26 @@ function doneCell(all,r,dvOnly){
   if(!r.parent)return readOnly?(r.progress>=100?"完了":"未完了"):`<input type="checkbox" data-done="${esc(r.id)}"${r.progress>=100?" checked":""} aria-label="完了">`;
   let n=0,d=0;for(let j=r.idx+1;j<all.length&&all[j].level>r.level;j++)if(dvOnly?isDv(all[j]):!all[j].parent){n++;if(all[j].progress>=100)d++}
   return !n?"—":d===n?"完了":`${d}/${n}`}
+/* overlay (v0.0.10): another project under this one on the same timeline — all of it (this project's filters don't apply; 成果物のみ does, as above), read-only.
+   Its rows have no data-id / data-open / data-bar / data-ms, so nothing on them can be picked, opened, dragged or dropped on; only folding (data-rtg) works.
+   Workdays, statuses and grey days off use the open project's company holidays (coHol), as everything on screen does */
+function refRows(rp,all,rms,X,XH,dw){
+  const shutAll=refFold.has(""),leaf=view.leaf,pa=[],fl=rms.map(m=>{const n=D(m.date);return`<span class="flag ${mc(m)}" style="left:${X(n)+dw/2-4}px" title="${md(n)} ${esc(m.title)}">${FLAG}<span>${esc(m.title)||md(n)}</span></span>`}).join("");
+  let h=`<div class="row refhd"><div class="lc"><div class="c-name"><button type="button" class="tg" data-rtg="" aria-label="折りたたみ" aria-expanded="${!shutAll}">${shutAll?"▸":"▾"}</button><span class="tn">${rp.shared?"👥 ":""}${esc(rp.name||"無題")}</span><small>重ねて表示（閲覧のみ）全体進捗 ${overall(rp).pct}%${leaf&&!all.some(isDv)?"・成果物なし":""}</small></div></div><div class="tl">${fl}</div></div>`;
+  if(shutAll)return h;
+  let hide=null;
+  all.forEach(r=>{
+    pa[r.level]=r.name;
+    if(hide!==null){if(r.level>hide)return;hide=null}
+    if(leaf&&(r.parent?r.level:!r.deliverable))return; // 成果物のみ, as for this project's rows
+    const shut=r.parent&&refFold.has(r.id);if(shut)hide=r.level;
+    const h0=hs(r),h1=he(r),x=XH(h0),w=(h1-h0+1)*dw/2,slim=r.parent&&r.level&&!shut,id=esc(r.id),urg=!r.parent&&r.st!=="done"&&r.st!=="over";
+    const mark=slim?"":r.milestone&&!r.parent?`<div class="ms st-${r.st}" style="left:${X(h1>>1)+dw/2-7}px" title="${esc(r.name)}"></div><span class="who" style="left:${X(h1>>1)+dw/2+12}px">${lab(r,h0,h1)}</span>`
+      :`<div class="bar st-${r.st}${r.parent?" sum":""}${urg?" urg dl"+delay(r):""}" style="left:${x}px;width:${w}px" title="${esc(r.name)}｜${ST[r.st]}"><div class="fill" style="width:${r.progress}%"></div>${offSegs(h0,h1,dw)}${!r.parent&&w>50?`<span class="bl">${esc(r.name)}</span>`:""}</div><span class="who" style="left:${x+w+6}px">${lab(r,h0,h1)}</span>`;
+    h+=`<div class="row ref${r.parent?" parent pc":""}${slim?" slim":""}"${r.parent?` style="--pc:${parColor(r)}"`:""}><div class="lc"><div class="c-name" style="padding-left:${6+(leaf?(r.level?1:0):r.level)*18}px">${r.parent?`<button type="button" class="tg" data-rtg="${id}" aria-label="折りたたみ" aria-expanded="${!shut}">${r.level?(shut?"▸":"▾"):folder(!shut)}</button>`:`<span class="dot st-${r.st}${r.deliverable?" dv":""}" title="${ST[r.st]}"></span>`}<span class="tn"${leaf&&r.level>1?` title="${esc(pa.slice(1,r.level).join(" › "))}"`:""}>${esc(r.name)}</span></div><div class="c-as">${esc(r.assignees.join("、"))}</div><div class="c-d">${slim?"":dS(h0)}</div><div class="c-d">${slim?"":dE(h1)}</div><div class="c-n">${bizH(h0,h1)}</div><div class="c-p">${r.progress}%</div></div><div class="tl">${mark}</div></div>`;
+  });
+  return h;
+}
 function render(){
   const p=projects[curId];if(p&&H(p.id).last==null)H(p.id).last=snap(p); // undo starts from the state first shown
   renderToolbar();renderTools();syncForm();
@@ -62,8 +84,9 @@ function render(){
   if(!p){chart.innerHTML=`<div class="empty"><div>プロジェクトがまだありません。</div><button class="btn pri" type="button" data-act="newproj">プロジェクトを作成</button></div>`;return}
   const all=derive(p);
   const sc=view.scale, list=view.list, dw=sc==="day"?30:sc==="week"?12:4;
-  let mn=TODAY,mx=TODAY;all.forEach(r=>{mn=Math.min(mn,D(r.start));mx=Math.max(mx,D(r.end))});(p.milestones||[]).forEach(m=>{mn=Math.min(mn,D(m.date));mx=Math.max(mx,D(m.date))});
-  // today ± half a year, stretched only to cover this project's own dates
+  const rp=list?null:refOf(),ra=rp?derive(rp):[],rms=(rp?.milestones||[]).filter(m=>m&&isDay(m.date));ra.forEach(r=>r.ref=1); // overlay (v0.0.10); r.ref: no progress button in lab()
+  let mn=TODAY,mx=TODAY;[...all,...ra].forEach(r=>{mn=Math.min(mn,D(r.start));mx=Math.max(mx,D(r.end))});[...(p.milestones||[]),...rms].forEach(m=>{mn=Math.min(mn,D(m.date));mx=Math.max(mx,D(m.date))});
+  // today ± half a year, stretched only to cover this project's own dates (and the overlaid one's)
   let a=Math.min(TODAY-183,mn-10),b=Math.max(TODAY+183,mx+10);
   if(sc==="week")while(dow(a)!==1)a--;
   if(sc==="month"){const d=dt(a);a=D(`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-01`)}
@@ -137,6 +160,7 @@ function render(){
       <div class="tl">${mark}</div></div>`;
   });
   if(!readOnly)rowsHtml+=`<div class="row addrow"><div class="lc" data-act="add"><div class="c-name" style="padding-left:12px">＋ タスクを追加</div></div><div class="tl"></div></div>`;
+  if(rp)rowsHtml+=refRows(rp,ra,rms,X,XH,dw);
 
   visOrder=vis;
   let lk="";const H0=75;

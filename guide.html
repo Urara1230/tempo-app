@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tempo 使い方ガイド</title>
+<!-- The illustrated guide (v0.0.11). Screenshots in guide/ come from tools/guide-shots.mjs with made-up data; run it again when the screen changes.
+     Plain HTML and CSS, nothing loaded from outside, works without JavaScript. The full reference is README.md (README.ja.md in the repository). -->
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--ink:#1d2329;--ink2:#5d6872;--line:#dde2e7;--accent:#2b7fd6;--mark:#ff6b35;--ok:#2f9e44;--over:#e03131;--code:#eef1f4;
+  --font:"Segoe UI","Yu Gothic UI","Meiryo",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#12171c;--panel:#1a2026;--ink:#e3e8ed;--ink2:#95a1ad;--line:#2c353e;--accent:#5aa9f0;--code:#232b33}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.8 var(--font)}
+a{color:var(--accent)}
+.wrap{display:flex;max-width:1180px;margin:0 auto}
+nav{position:sticky;top:0;align-self:flex-start;width:230px;flex:none;max-height:100vh;overflow:auto;padding:28px 12px 28px 20px;font-size:13.5px}
+nav b{display:block;margin-bottom:8px;font-size:15px}
+nav ol{margin:0;padding:0;list-style:none}
+nav li a{display:block;padding:4px 10px;border-radius:6px;color:var(--ink);text-decoration:none}
+nav li a:hover{background:var(--panel)}
+main{flex:1;min-width:0;padding:28px 28px 80px;max-width:900px}
+h1{margin:0 0 4px;font-size:28px}
+h2{margin:56px 0 12px;padding-top:12px;border-top:1px solid var(--line);font-size:21px}
+h3{margin:28px 0 8px;font-size:16.5px}
+.lead{color:var(--ink2)}
+figure{margin:16px 0 22px}
+figure img{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px}
+figcaption{margin-top:6px;font-size:13px;color:var(--ink2)}
+figure svg{display:block;width:100%;height:auto;max-width:760px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+table{width:100%;border-collapse:collapse;margin:10px 0 18px;font-size:14px;background:var(--panel)}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--code);font-weight:600;white-space:nowrap}
+code,kbd{font-family:Consolas,"BIZ UDGothic",monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}
+.n{display:inline-block;min-width:21px;height:21px;margin-right:4px;border-radius:50%;background:var(--mark);color:#fff;font:700 12px/21px var(--font);text-align:center;vertical-align:1px}
+.note{margin:14px 0;padding:10px 14px;border-left:4px solid var(--accent);background:var(--panel);border-radius:0 8px 8px 0}
+.warn{border-left-color:var(--over)}
+ol.steps>li{margin-bottom:6px}
+.row2{display:flex;flex-wrap:wrap;gap:14px}
+.row2 figure{flex:1 1 300px;margin:8px 0}
+@media (max-width:820px){.wrap{display:block}nav{position:static;width:auto;max-height:none;padding:16px 16px 0}main{padding:12px 16px 60px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav aria-label="目次">
+  <b>目次</b>
+  <ol>
+    <li><a href="#about">0. Tempo とは</a></li>
+    <li><a href="#setup">1. 最初の設定</a></li>
+    <li><a href="#screen">2. 画面の見方</a></li>
+    <li><a href="#lock">3. 編集の流れ（ロック）</a></li>
+    <li><a href="#tasks">4. タスクの基本操作</a></li>
+    <li><a href="#colors">5. 色と状態</a></li>
+    <li><a href="#list">6. 一覧と成果物のみ</a></li>
+    <li><a href="#overlay">7. 重ねて表示</a></li>
+    <li><a href="#milestone">8. マイルストーンと休日</a></li>
+    <li><a href="#excel">9. Excel とバックアップ</a></li>
+    <li><a href="#faq">10. 困ったとき</a></li>
+    <li><a href="#admin">付録：管理者向け</a></li>
+  </ol>
+</nav>
+<main>
+<h1>Tempo 使い方ガイド</h1>
+<p class="lead">最初の設定から毎日の使い方まで、画面の写真つきで説明します。画面の写真はすべて架空のデータです。すべての操作の詳しい説明は、同じフォルダの <code>README.md</code> にあります。</p>
+
+<h2 id="about">0. Tempo とは</h2>
+<ul>
+  <li>ブラウザで使うガントチャート（工程表）です。タスクの日程、進み具合、遅れをひと目で確認できます。</li>
+  <li>インストールは不要です。Chrome または Edge で開きます。</li>
+  <li>チームのプロジェクトは会社の共有ドライブに置き、全員が同じものを見ます。編集するときは、先に「ロック」をかけます（<a href="#lock">第 3 章</a>）。</li>
+</ul>
+
+<h2 id="setup">1. 最初の設定（1 回だけ）</h2>
+<p>はじめて使うときに、上から順に行ってください。2 回目からは、デスクトップの <code>Tempo.bat</code> をダブルクリックするだけです。</p>
+
+<h3>1-1. Tempo.bat をコピーして開く</h3>
+<ol class="steps">
+  <li>管理者から案内された共有ドライブのフォルダを開きます（中に <code>app</code>、<code>data</code>、<code>Tempo.bat</code> があります）。</li>
+  <li><code>Tempo.bat</code> を<b>自分のパソコン</b>（デスクトップなど）にコピーします。</li>
+  <li>コピーした <code>Tempo.bat</code> をダブルクリックします。最新の Tempo が自分のパソコンにコピーされ、Chrome で開きます。</li>
+</ol>
+<figure>
+<svg viewBox="0 0 760 290" role="img" aria-label="共有ドライブの Tempo.bat を自分のパソコンにコピーし、ダブルクリックすると最新の app がコピーされて Chrome で開き、データは共有ドライブの data に読み書きされる" font-family="Segoe UI,Yu Gothic UI,Meiryo,sans-serif" font-size="13">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ff6b35"/></marker>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2b7fd6"/></marker></defs>
+  <g fill="none" stroke="#8a96a0" stroke-width="1.3">
+    <rect x="20" y="20" width="250" height="250" rx="10"/><rect x="490" y="20" width="250" height="250" rx="10"/>
+    <rect x="40" y="70" width="210" height="44" rx="6"/><rect x="40" y="130" width="210" height="44" rx="6"/><rect x="40" y="190" width="210" height="44" rx="6"/>
+    <rect x="510" y="70" width="210" height="44" rx="6"/><rect x="510" y="130" width="210" height="44" rx="6"/><rect x="510" y="190" width="210" height="44" rx="6"/>
+  </g>
+  <g fill="#8a96a0" font-weight="700"><text x="36" y="48">共有ドライブ（Tempo フォルダ）</text><text x="506" y="48">自分のパソコン</text></g>
+  <g fill="currentColor" style="color:var(--ink)">
+    <text x="54" y="97">Tempo.bat</text><text x="54" y="157">app（Web ページ）</text><text x="54" y="217">data（プロジェクト）</text>
+    <text x="524" y="97">Tempo.bat（デスクトップ）</text><text x="524" y="157">Tempo（最新をコピー）</text><text x="524" y="217">Chrome で表示</text>
+  </g>
+  <g stroke="#ff6b35" stroke-width="2" fill="none"><path d="M250 92H506" marker-end="url(#ar)"/><path d="M250 152H506" marker-end="url(#ar)"/><path d="M615 174V186" marker-end="url(#ar)"/></g>
+  <path d="M506 222H254" stroke="#2b7fd6" stroke-width="2" stroke-dasharray="6 4" fill="none" marker-end="url(#ar2)" marker-start="url(#ar2)"/>
+  <g font-size="12"><text x="290" y="84" fill="#ff6b35">① 最初に 1 回コピー</text><text x="282" y="144" fill="#ff6b35">② 開くたびに最新をコピー</text><text x="300" y="244" fill="#2b7fd6">③ データの読み書き</text></g>
+</svg>
+<figcaption>Tempo.bat は、開くたびに共有ドライブから最新の Tempo を自分のパソコンにコピーして開きます。データは共有ドライブの <code>data</code> に保存されます。</figcaption>
+</figure>
+<div class="note warn">共有ドライブの <code>app\Tempo.html</code> を直接開いたり、開いたページをブックマークしたりしないでください。共有フォルダが使えず、新しいバージョンにも更新されません。いつも <code>Tempo.bat</code> から開きます。</div>
+<p>黒いウィンドウが一瞬表示されますが、問題ありません。気になる場合は <code>Tempo.bat</code> のショートカットを作り、「プロパティ」→「実行時の大きさ」を「最小化」にします。</p>
+
+<h3>1-2. 共有フォルダ（data）を選ぶ</h3>
+<ol class="steps">
+  <li>右上の「設定」を押します（右側にパネルが開きます）。</li>
+  <li>「共有フォルダ」の「フォルダを選ぶ」<span class="n">2</span>を押し、共有ドライブの <code>data</code> フォルダを選びます。</li>
+  <li>Chrome がフォルダの使用許可を求めるので「許可」を選びます。</li>
+</ol>
+<div class="row2">
+<figure><img src="guide/settings.png" alt="設定パネル。1 メンバーの入力欄、2 共有フォルダの「フォルダを選ぶ」、3 バックアップの「保存先フォルダを選ぶ」" width="380" height="702" loading="lazy"><figcaption>「設定」パネル。<span class="n">1</span>メンバー　<span class="n">2</span>共有フォルダ　<span class="n">3</span>バックアップ</figcaption></figure>
+<div style="flex:1 1 300px">
+<ul>
+  <li>選べるのは名前が <code>data</code> のフォルダだけです（選び間違いを防ぐため）。</li>
+  <li>ブラウザを起動し直したあと、最初に画面をクリックしたときにもう一度だけ許可を求められます。「許可」を選んでください。</li>
+  <li>選ぶと、共有プロジェクトの件数が表示されます。</li>
+</ul>
+</div>
+</div>
+
+<h3>1-3. 自分の名前を選ぶ</h3>
+<p>右上の「自分」<span class="n">1</span>で自分の名前を選びます。<b>「自分」を選ぶまで、共有プロジェクトは閲覧のみです</b>（だれが編集中かを表示するために使います）。</p>
+<figure><img src="guide/me.png" alt="右上の「自分」のプルダウン" width="309" height="46" loading="lazy"><figcaption>このパソコンのブラウザに記憶されるので、毎回選ぶ必要はありません。</figcaption></figure>
+<div class="note">一覧に自分の名前がないときは、プロジェクトのメンバー名簿に登録されていません。共有プロジェクトの名簿はロック中の人だけが変更できるので、すでに使っている人に「設定」→「メンバー」<span class="n">1</span>（上の「設定」パネルの写真）で追加してもらってください。</div>
+
+<h3>1-4. プロジェクトを開く</h3>
+<p>左上のプロジェクトのプルダウンから選びます。名前の前に 👥 が付いているのが共有ドライブのプロジェクトです。</p>
+
+<h3>1-5. （おすすめ）バックアップ先を選ぶ</h3>
+<p>「設定」→「バックアップ」の「保存先フォルダを選ぶ」<span class="n">3</span>で、<b>自分のパソコン上の</b>フォルダを選びます。変更のたびに <code>auto.backup.json</code> が自動で上書き保存され、上部バーの「保存」を押すと、その時点のファイルが日時付きで追加されます。共有ドライブの <code>data</code> の中は選ばないでください。</p>
+
+<h2 id="screen">2. 画面の見方</h2>
+<figure><img src="guide/screen.png" alt="Tempo の画面全体。番号 1 から 14 の説明は下の表" width="1578" height="690" loading="lazy"></figure>
+<table>
+  <tr><th>番号</th><th>名前</th><th>はたらき</th></tr>
+  <tr><td><span class="n">1</span></td><td>プロジェクト</td><td>開くプロジェクトを選びます（👥 = 共有）</td></tr>
+  <tr><td><span class="n">2</span></td><td>自分</td><td>自分の名前（<a href="#setup">1-3</a>）</td></tr>
+  <tr><td><span class="n">3</span></td><td>保存</td><td>バックアップ先に、今の状態を日時付きのファイルで保存します。左の文字は保存の状態（「このブラウザに保存」「共有フォルダと同期中」など）</td></tr>
+  <tr><td><span class="n">4</span></td><td>ガント｜一覧</td><td>ガントチャートと一覧表の切り替え（<a href="#list">第 6 章</a>）</td></tr>
+  <tr><td><span class="n">5</span></td><td>成果物のみ</td><td>フォルダと成果物だけを表示（<a href="#list">第 6 章</a>）</td></tr>
+  <tr><td><span class="n">6</span></td><td>重ねて表示</td><td>別のプロジェクトを下に重ねて見比べます（<a href="#overlay">第 7 章</a>）</td></tr>
+  <tr><td><span class="n">7</span></td><td>期間・節目・全体進捗</td><td>プロジェクト全体の期間、次のマイルストーンまでの日数、全体の進捗</td></tr>
+  <tr><td><span class="n">8</span></td><td>設定</td><td>名前、メンバー、Excel、バックアップ、共有フォルダ、プロジェクトの追加・削除。左は検索欄（タスク名で探す）</td></tr>
+  <tr><td><span class="n">9</span></td><td>担当者で絞り込み</td><td>選んだ人のタスクだけを表示</td></tr>
+  <tr><td><span class="n">10</span></td><td>状態ラベル</td><td>押すとその状態のタスクだけを表示（もう一度押すと解除）</td></tr>
+  <tr><td><span class="n">11</span></td><td>日｜週｜月</td><td>タイムラインの目盛り。右の「今日」で今日の位置へ</td></tr>
+  <tr><td><span class="n">12</span></td><td>ツールバー</td><td>元に戻す、コピー、挿入、階層、移動、リンク、担当、編集、追加、削除。ボタンにマウスを置くと説明が出ます</td></tr>
+  <tr><td><span class="n">13</span></td><td>タスク表</td><td>タスク名・担当・開始・終了・日数（営業日）・進捗。共有プロジェクトでは左上にロックのスイッチ（<a href="#lock">第 3 章</a>）</td></tr>
+  <tr><td><span class="n">14</span></td><td>タイムライン</td><td>バーで日程を表示。赤い縦線が今日、灰色の背景が土日、色付きが祝日・会社の休日</td></tr>
+</table>
+
+<h2 id="lock">3. 編集の流れ（共有プロジェクトのロック）</h2>
+<p>共有プロジェクトは、ふだんは<b>閲覧のみ</b>です。同時に 2 人が書き換えないように、編集する人が「ロック」をかけます。スイッチはタスク表の左上にあります。</p>
+<figure>
+<svg viewBox="0 0 760 230" role="img" aria-label="閲覧のみの状態でスイッチを押すと編集中になり、もう一度押すか 2 分操作しないと閲覧のみに戻る。その間、ほかの人には〇〇さんが編集中と表示される" font-family="Segoe UI,Yu Gothic UI,Meiryo,sans-serif" font-size="13">
+  <defs><marker id="lar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#8a96a0"/></marker></defs>
+  <rect x="30" y="40" width="210" height="64" rx="10" fill="none" stroke="#8a96a0" stroke-width="1.5"/>
+  <rect x="510" y="40" width="210" height="64" rx="10" fill="none" stroke="#2f9e44" stroke-width="2"/>
+  <rect x="510" y="150" width="210" height="64" rx="10" fill="none" stroke="#e03131" stroke-width="2"/>
+  <g font-weight="700"><text x="50" y="68" fill="#8a96a0">閲覧のみ</text><text x="530" y="68" fill="#2f9e44">編集中（自分）</text><text x="530" y="178" fill="#e03131">〇〇さんが編集中</text></g>
+  <g fill="currentColor" style="color:var(--ink2)" font-size="12"><text x="50" y="90">だれも編集していない</text><text x="530" y="90">ほかの人は閲覧のみ</text><text x="530" y="200">ほかの人の画面</text></g>
+  <g stroke="#8a96a0" stroke-width="1.6" fill="none"><path d="M240 58H506" marker-end="url(#lar)"/><path d="M510 86H244" marker-end="url(#lar)"/><path d="M615 104V146" stroke-dasharray="4 4" marker-end="url(#lar)"/></g>
+  <g fill="currentColor" style="color:var(--ink)" font-size="12.5"><text x="300" y="50">スイッチを押す</text><text x="262" y="108">もう一度押す ／ 2 分なにもしない</text><text x="262" y="124">／ プロジェクトを切り替える</text></g>
+  <text x="30" y="178" fill="currentColor" style="color:var(--ink2)" font-size="12.5">終わった人の変更は、約 5 秒で全員の画面に表示されます</text>
+</svg>
+</figure>
+<div class="row2">
+<figure><img src="guide/lock-off.png" alt="閲覧のみ（編集するにはこのスイッチを押します）" width="552" height="93" loading="lazy"><figcaption>閲覧のみ：押すと編集を始めます</figcaption></figure>
+<figure><img src="guide/lock-mine.png" alt="編集中（ほかの人は閲覧のみ）" width="552" height="93" loading="lazy"><figcaption>編集中（緑）：終わったらもう一度押します</figcaption></figure>
+<figure><img src="guide/lock-other.png" alt="佐藤さんが編集中（閲覧のみ）" width="552" height="93" loading="lazy"><figcaption>ほかの人が編集中（赤）：終わるのを待ちます</figcaption></figure>
+</div>
+<ol class="steps">
+  <li>スイッチを押します。最新の内容を読み込んでからロックし、緑の「編集中」になります。</li>
+  <li>編集します。変更は自動で保存されます。</li>
+  <li>終わったら、もう一度スイッチを押します。<b>2 分間なにも操作しないと自動で解除</b>されます。続けるときはもう一度押してください。</li>
+</ol>
+<ul>
+  <li>相手が解除し忘れて連絡もつかないとき：赤いスイッチを 2 回押すと、相手のロックを強制的に解除できます（最後の手段です）。</li>
+  <li>スイッチの横に赤字で「ロックなし」と出たとき：ロックのファイルを作れなかったため、ロックせずに編集しています。編集はできますが、ほかの人も同時に編集できるので、周りに声をかけてください。</li>
+  <li>ボタンを押しても何も起こらないときは、たいていロックがかかっていません（閲覧のみ）。</li>
+</ul>
+
+<h2 id="tasks">4. タスクの基本操作</h2>
+<p>基本は<b>クリックで選択、ダブルクリックで編集</b>です。シングルクリックで編集画面が開くことはありません。</p>
+<table>
+  <tr><th>したいこと</th><th>操作</th></tr>
+  <tr><td>タスクを追加</td><td>ツールバーの緑の「＋」、またはタスク表のいちばん下の「＋ タスクを追加」</td></tr>
+  <tr><td>選択</td><td>行かバーをクリック（Ctrl で複数、Shift で範囲）</td></tr>
+  <tr><td>詳しく編集</td><td>行かバーを<b>ダブルクリック</b>（または選択して Enter）</td></tr>
+  <tr><td>日付を変える</td><td>バーの中央をドラッグで移動、両端をドラッグで開始日・終了日を変更</td></tr>
+  <tr><td>進捗を変える</td><td>バーの右の「N%」を<b>ダブルクリック</b>してスライダーで調整</td></tr>
+  <tr><td>担当者を決める</td><td>タスク表の「担当」の枠をクリックしてメンバーを選ぶ</td></tr>
+  <tr><td>順番・階層を変える</td><td>行を約 0.35 秒<b>長押し</b>してドラッグ（行の上側 = 上へ、下側 = 下へ、中央 = 子タスクに）。または Tab / Shift+Tab</td></tr>
+  <tr><td>削除</td><td>選択して Delete を 2 回（ツールバーの × を 2 回でも）</td></tr>
+  <tr><td>元に戻す</td><td>Ctrl+Z（やり直しは Ctrl+Y）</td></tr>
+</table>
+<figure><img src="guide/bar.png" alt="バー。1 中央をドラッグで移動、2 端をドラッグで日付変更、3 進捗をダブルクリック" width="498" height="109" loading="lazy"><figcaption><span class="n">1</span>中央をドラッグで移動　<span class="n">2</span>端をドラッグで開始日・終了日　<span class="n">3</span>ダブルクリックで進捗。矢印はリンク（前の工程が延びると後ろが自動でずれます）</figcaption></figure>
+<div class="row2">
+<figure><img src="guide/task-panel.png" alt="タスク編集パネル" width="380" height="702" loading="lazy"><figcaption>ダブルクリックで開くパネル</figcaption></figure>
+<div style="flex:1 1 300px">
+<p><span class="n">1</span><b>親</b>：どのタスクの下に入るか。変えて「保存」で移動します</p>
+<p><span class="n">2</span><b>担当者</b>：下の名前を押しても選べます</p>
+<p><span class="n">3</span><b>開始日・終了日</b></p>
+<p><span class="n">4</span><b>午前から / 午後から</b>：半日単位にできます（終了日は「午後まで / 午前まで」）</p>
+<p><span class="n">5</span><b>進捗</b></p>
+<p><span class="n">6</span><b>成果物</b>：成果物のタグ（<a href="#list">第 6 章</a>）</p>
+<p><span class="n">7</span><b>メモ</b>：説明やリンクなど</p>
+<p>最後に「保存」を押します。</p>
+</div>
+</div>
+<div class="row2">
+<figure><img src="guide/context-menu.png" alt="右クリックメニュー" width="560" height="421" loading="lazy"><figcaption>行を右クリックすると、名前の変更、コピー、挿入、子タスクの一括追加、成果物のタグ、階層・移動が使えます</figcaption></figure>
+<div style="flex:1 1 260px">
+<p><b>子タスクをまとめて追加</b>：右クリック →「子タスクを一括追加」で、1 行に 1 つ名前を書く（貼り付けもできます）と、まとめて子タスクになります。</p>
+<p><b>親タスク</b>：子タスクを持つタスクです。日付・進捗・担当は子タスクから自動で計算されるので、子タスクのほうを変えてください。階層は 4 段までです。</p>
+</div>
+</div>
+
+<h2 id="colors">5. 色と状態</h2>
+<figure><img src="guide/colors.png" alt="状態ごとのバーの色" width="1600" height="358" loading="lazy"></figure>
+<table>
+  <tr><th>名前の左の印・状態</th><th>意味</th><th>バーの色</th></tr>
+  <tr><td>完了（灰）</td><td>進捗 100%</td><td>灰色</td></tr>
+  <tr><td>未着手（青）</td><td>開始日がまだ来ていない</td><td>青</td></tr>
+  <tr><td>順調（緑）</td><td>予定どおり</td><td>青</td></tr>
+  <tr><td>進捗遅れ（橙）</td><td>経過した日数に対して、進捗が 10 ポイント以上遅れている</td><td>右端が紫 → ピンク（ピンクほど遅れが大きい）</td></tr>
+  <tr><td>期限切れ（赤）</td><td>終了日を過ぎても終わっていない</td><td>赤 → 黄</td></tr>
+</table>
+<ul>
+  <li>印が丸ではなく<b>四角</b>のタスクは、成果物のタグが付いたタスクです。</li>
+  <li>親タスクは階層ごとに色の帯が付きます（青・青緑・黄）。右クリック →「色」で変えられます。</li>
+  <li>バーの灰色の部分は土日・祝日・会社の休日です（営業日に数えません）。</li>
+  <li>◆ は 1 日だけの節目のタスク（マイルストーン）です。</li>
+</ul>
+
+<h2 id="list">6. 一覧と成果物のみ</h2>
+<p>「一覧」を押すと、タイムラインなしの表になります。いちばん下の階層のタスクの「完了」にチェックを入れると進捗 100%、外すと 0% です。親タスクには「1/3」のように完了した数が出ます。「ガント」で元に戻ります。</p>
+<figure><img src="guide/list.png" alt="一覧表示" width="1552" height="393" loading="lazy"></figure>
+<p><span class="n">1</span>「成果物のみ」をオンにすると、いちばん上の親タスク（フォルダ）と<b>成果物のタグが付いたタスク</b>だけになります。どこまで進んだかの確認に使います。ガントでも一覧でも使えます。</p>
+<figure><img src="guide/leaf.png" alt="成果物のみの表示" width="1600" height="524" loading="lazy"></figure>
+<p><b>成果物のタグの付け方</b>：タスクを選んで（複数可）右クリック →「成果物にする」。または編集パネルの「成果物」にチェック。子タスクの一括追加では「成果物として追加」に最初からチェックが入っています。</p>
+
+<h2 id="overlay">7. 重ねて表示</h2>
+<p>ほかのチームのプロジェクトを、自分のプロジェクトの下に<b>同じ日付の目盛りで</b>重ねて表示します。たとえばモーションのプロジェクトを開いてキャラクターのプロジェクトを重ねると、「リグがまだ終わっていないのにモーションを始める予定になっている」といったずれが見つかります。</p>
+<figure><img src="guide/overlay.png" alt="重ねて表示。1 重ねて表示のプルダウン、2 重ねたプロジェクトの見出し" width="1600" height="638" loading="lazy"><figcaption><span class="n">1</span>「重ねて表示」で相手のプロジェクトを選ぶ　<span class="n">2</span>見出しに名前と全体進捗。相手のマイルストーンもこの行に出ます</figcaption></figure>
+<ul>
+  <li>相手のタスクは薄い色で、<b>閲覧のみ</b>です（選択・編集・ドラッグはできません）。親タスクは折りたためます。見出しの ▾ で全体を折りたためます。</li>
+  <li>「成果物のみ」をオンにすると、相手も成果物だけになります。担当者の絞り込み、状態ラベル、検索は相手には効きません。</li>
+  <li>自分のプロジェクトの全体進捗や Excel には含まれません。「一覧」では表示されません。</li>
+  <li>どれを重ねたかはプロジェクトごとに自分のブラウザに記憶されます。ほかの人の画面には影響しません。「重ねて表示：なし」で元に戻ります。</li>
+  <li>選べるのは、自分のブラウザで開けるプロジェクトだけです。相手のプロジェクトが出てこないときは、相手に「設定」→「共有フォルダへ移動」をしてもらってください。</li>
+</ul>
+
+<h2 id="milestone">8. マイルストーンと会社の休日</h2>
+<div class="row2">
+<figure><img src="guide/milestone.png" alt="マイルストーンと会社の休日を設定する画面" width="360" height="219" loading="lazy"></figure>
+<div style="flex:1 1 300px">
+<p>タイムラインの上の<b>日付をクリック</b>すると、この画面が開きます。</p>
+<ul>
+  <li><b>マイルストーン</b>：色を選び、タイトル（例：α版提出）を入れて「登録する」。旗が立ち、2 行目に「次の節目」として残り日数が出ます。旗をクリックすると変更・削除できます。</li>
+  <li><b>会社の休日</b>：色を選んで「休日にする」。その日は営業日に数えません（日本の祝日は最初から入っています）。もう一度クリックして「休日を解除」で戻ります。</li>
+</ul>
+</div>
+</div>
+
+<h2 id="excel">9. Excel とバックアップ</h2>
+<div class="row2">
+<figure><img src="guide/settings-io.png" alt="設定パネルの書き出し・読み込みとバックアップ" width="380" height="702" loading="lazy"></figure>
+<div style="flex:1 1 300px">
+<p><span class="n">1</span><b>書き出す</b>：Excel（Brabio 形式）で保存します。「一覧を書き出す」は Tempo を使わない人への報告用です（Tempo には読み込めません）。</p>
+<p><span class="n">2</span><b>読み込んで置き換え</b>：Excel を読み込みます。<b>今のプロジェクトのタスクがすべて置き換わります</b>（間違えたら Ctrl+Z）。</p>
+<p><span class="n">3</span><b>バックアップから復元</b>：バックアップのファイル（<code>.backup.json</code>）を選んで元に戻します。ファイルを Tempo の画面にドラッグ＆ドロップしても復元できます。</p>
+<p>バックアップ先の選び方は <a href="#setup">1-5</a> を見てください。</p>
+</div>
+</div>
+
+<h2 id="faq">10. 困ったとき</h2>
+<table>
+  <tr><th>困ったこと</th><th>原因と対処</th></tr>
+  <tr><td>共有プロジェクトが編集できない・ボタンを押しても何も起こらない</td><td>ロックがかかっていません。タスク表の左上のスイッチを押してください。押せないときは「自分」が未選択です（<a href="#setup">1-3</a>）。赤で「〇〇さんが編集中」なら、終わるのを待ちます</td></tr>
+  <tr><td>「新しいバージョン … Tempo.bat から開き直してください」と出た</td><td>ページを閉じて、<code>Tempo.bat</code> から開き直してください。それまで共有プロジェクトは閲覧のみです</td></tr>
+  <tr><td>「共有フォルダに接続できません」と出た</td><td>共有ドライブにつながっているか確認してください。その間、共有プロジェクトは閲覧のみです</td></tr>
+  <tr><td>「未保存の変更があります（再試行中）」が消えない</td><td>保存を自動で再試行しています。ページを閉じずに、共有ドライブへの接続を確認してください。続くときは、メッセージのかっこ内の英語を管理者に伝えます</td></tr>
+  <tr><td>「フォルダを選ぶ」で data を選べない</td><td>共有ドライブの <code>Tempo.html</code> を直接開いていませんか。<code>Tempo.bat</code> から開いてください</td></tr>
+  <tr><td>「自分」に自分の名前がない</td><td>名簿に登録されていません。すでに使っている人に「設定」→「メンバー」で追加してもらってください</td></tr>
+  <tr><td>親タスクの日付が変えられない</td><td>子タスクから自動計算されます。子タスクの日付を変えてください</td></tr>
+  <tr><td>ドラッグすると文字が選択されてしまう</td><td>行を約 0.35 秒長押ししてからドラッグします</td></tr>
+  <tr><td>進捗の「N%」をクリックしても反応しない</td><td>ダブルクリックです</td></tr>
+  <tr><td>Ctrl+Z で戻せなくなった</td><td>ほかの人の変更が届くと、そのプロジェクトの「元に戻す」の履歴は消えます。それより前に戻すには「バックアップから復元」を使います</td></tr>
+  <tr><td>「重ねて表示」に相手のプロジェクトが出ない</td><td>相手のプロジェクトが相手のブラウザにしかありません。相手に「共有フォルダへ移動」をしてもらってください</td></tr>
+  <tr><td>不具合を報告したい</td><td>左上の「Tempo」の横のバージョン番号と、共有ドライブの <code>data\logs\</code> にあるその日の自分の記録（<code>日付_名前.log</code>）を管理者に渡してください。タスク名やメモの内容は記録されていません</td></tr>
+</table>
+
+<h2 id="admin">付録：管理者向け</h2>
+<h3>共有ドライブの構成</h3>
+<table>
+  <tr><th>場所</th><th>内容</th></tr>
+  <tr><td><code>app\</code></td><td>Web ページ。新しいバージョンの公開時に丸ごと入れ替わるので、ほかのファイルを置かないでください</td></tr>
+  <tr><td><code>data\projects\</code></td><td>プロジェクトごとに 1 ファイル（<code>プロジェクト名_ID.json</code>）。直接編集・削除しないでください。バックアップファイルをここへコピーしても読み込まれません（「バックアップから復元」→「共有フォルダへ移動」を使います）</td></tr>
+  <tr><td><code>data\locks\</code></td><td>編集ロックの空のファイル。そのままで構いません（古いものは 2 分で無効になります）</td></tr>
+  <tr><td><code>data\logs\</code></td><td>操作の記録（1 人 1 日 1 ファイル）。不具合の調査用で、古いものはいつ削除してもかまいません</td></tr>
+  <tr><td><code>Tempo.bat</code></td><td>起動用。各自が自分のパソコンにコピーして使います</td></tr>
+</table>
+<p><code>data</code> フォルダは、名前を変えたり移動したりしないでください。</p>
+<h3>新しいバージョンの反映</h3>
+<p>新しいバージョンが <code>app\</code> に入ると、開いている画面に「新しいバージョンがあります」と表示されます。全員に <code>Tempo.bat</code> から開き直すよう伝えてください。</p>
+</main>
+</div>
+</body>
+</html>

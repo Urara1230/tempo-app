@@ -49,6 +49,11 @@ let me=ls.get("mg.me")||""; // who I am, picked from the roster, kept in this br
 let view={scale:["week","month"].includes(ls.get("mg.scale"))?ls.get("mg.scale"):"day",list:ls.get("mg.view")==="list",ids:ls.get("mg.ids")==="1",leaf:ls.get("mg.leaf")==="1",who:"",st:"",q:""}; // ids: the ID column of 一覧 is open (folded by default) // leaf: 一覧 shows only tasks without sub-tasks // list: 一覧 instead of the chart
 let visOrder=[];
 let collapsed=new Set(), editingId=null, dragging=false, scrolledFor=null, range=null;
+// overlay (v0.0.10): another project drawn read-only under the open one. mg.ref = open project id → overlaid project id, this browser only.
+// refFold: its folded parents ("" = the whole section), apart from collapsed — two projects can have the same task ids
+let refFold=new Set();
+const refMap=()=>{try{return JSON.parse(ls.get("mg.ref"))||{}}catch(e){return{}}};
+const refOf=()=>{const id=refMap()[curId];return typeof id==="string"&&id!==curId&&Object.hasOwn(projects,id)?projects[id]:null};
 const pendingIds=new Set(), timers={}, retry={}; // retry: id → saves of it that failed in a row (flush): the change stays on screen and is tried again
 let sel=new Set(), lastSel=null, clip=null, delArmed=false, lkArmed=false, lkWas=""; // lkArmed: someone else's lock pressed once; lkWas: the lock switch as last drawn ("true" / "false", view.js lockBar)
 let chain=Promise.resolve();
@@ -92,7 +97,7 @@ function overall(p){
 // label right of the bar: "2/28 (土)　0%　18営業日　担当" ("2/28 (土) 午前まで　…　2.5営業日" with half days); a, b = the half-day slots it runs over
 function lab(r,a,b){const who=esc((r.assignees||[]).join("、")),e=b>>1,d=`${md(e)} (${WD[dow(e)]})`,pr=+r.progress||0;
   if(r.milestone&&!r.parent)return`${d}　${esc(r.name)}${who?"　"+who:""}`;
-  const pg=r.parent||readOnly?`${pr}%`:`<button type="button" class="pg" data-pg="${esc(r.id)}" title="ダブルクリックで進捗を変更">${pr}%</button>`;
+  const pg=r.parent||readOnly||r.ref?`${pr}%`:`<button type="button" class="pg" data-pg="${esc(r.id)}" title="ダブルクリックで進捗を変更">${pr}%</button>`;
   return`${d}${b&1?"":" 午前まで"}　${pg}　${bizH(a,b)}営業日${who?"　"+who:""}`}
 function members(p){return [...new Set([...(p.members||[]),...(p.tasks||[]).flatMap(t=>t.assignees||[])])]}
 const roster=p=>p.members||members(p); // until a roster is saved, start from names used in tasks

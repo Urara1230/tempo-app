@@ -216,6 +216,7 @@ $("meSel").addEventListener("change",e=>{me=e.target.value;ls.set("mg.me",me);re
 $("whoSel").addEventListener("change",e=>{view.who=e.target.value;render()});
 document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>{view.list=b.dataset.view==="list";ls.set("mg.view",view.list?"list":"gantt");render()}));
 $("leafBtn").addEventListener("click",()=>{view.leaf=!view.leaf;ls.set("mg.leaf",view.leaf?"1":"");render()}); // only the top folders and the tagged tasks (deliverables), in 一覧 and the chart
+$("refSel").addEventListener("change",e=>{const m=refMap();if(e.target.value)m[curId]=e.target.value;else delete m[curId];ls.set("mg.ref",JSON.stringify(m));refFold.clear();render()}); // overlay (v0.0.10): per open project, this browser only
 $("todayBtn").addEventListener("click",scrollToToday);
 document.querySelectorAll("[data-scale]").forEach(b=>b.addEventListener("click",()=>{view.scale=b.dataset.scale;ls.set("mg.scale",view.scale);render()}));
 $("qIn").addEventListener("input",e=>{view.q=e.target.value.trim().toLowerCase();render()}); // search this project by task name
@@ -280,6 +281,7 @@ chart.addEventListener("click",e=>{
   const ht=e.target.closest("#ht");if(ht&&range){const n=range.a+Math.floor((e.clientX-ht.getBoundingClientRect().left)/range.dw);if(n>=range.a&&n<=range.b)openMs(S(n),null,e.clientX,e.clientY);return}
   if(e.target.closest("[data-act=newproj]"))return newProject();
   if(e.target.closest("[data-act=add]"))return cmd("add");
+  const rt=e.target.closest("[data-rtg]");if(rt){const id=rt.dataset.rtg;refFold.has(id)?refFold.delete(id):refFold.add(id);render();return} // overlaid project: fold a parent / the whole section ("")
   const tg=e.target.closest("[data-tg]");if(tg){const id=tg.dataset.tg;collapsed.has(id)?collapsed.delete(id):collapsed.add(id);render();return}
   const o=e.target.closest("[data-open]");if(o)selectRow(o.dataset.open,e);
 });

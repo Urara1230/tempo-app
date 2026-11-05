@@ -14,7 +14,7 @@
 
 <div class="app">
   <div class="topbar">
-    <div class="brand"><i aria-hidden="true"><b></b><b style="--n:1"></b><b style="--n:2"></b></i><span role="img" aria-label="Tempo"><b style="--n:3">T</b><b style="--n:4">e</b><b style="--n:5">m</b><b style="--n:6">p</b><b style="--n:7">o</b></span><small class="ver">v0.0.9</small></div>
+    <div class="brand"><i aria-hidden="true"><b></b><b style="--n:1"></b><b style="--n:2"></b></i><span role="img" aria-label="Tempo"><b style="--n:3">T</b><b style="--n:4">e</b><b style="--n:5">m</b><b style="--n:6">p</b><b style="--n:7">o</b></span><small class="ver">v0.0.11</small></div>
     <select id="projSel" aria-label="プロジェクト"></select>
     <span class="spacer"></span>
     <span class="mode" id="modeLbl"></span>
@@ -26,6 +26,7 @@
       <button type="button" data-view="gantt">ガント</button><button type="button" data-view="list" title="一覧：タイムラインなしで、タスクと成果物を ID・担当・状況・完了で一覧表示">一覧</button>
     </div>
     <button type="button" class="sw" id="leafBtn" title="いちばん上の親タスク（フォルダ）と成果物のタグが付いたタスクだけを表示（ガント・一覧とも）。間の親タスクは成果物の名前にマウスを置くと分かります">成果物のみ</button>
+    <select id="refSel" aria-label="重ねて表示" title="別のプロジェクトをガントの下に重ねて表示します（閲覧のみ。選んだプロジェクトはこのブラウザに保存）"></select>
     <div class="stats" id="stats"></div>
     <span class="spacer"></span>
     <label class="q"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg><input type="search" id="qIn" placeholder="このプロジェクトを検索" aria-label="タスク名で検索" autocomplete="off"></label>
