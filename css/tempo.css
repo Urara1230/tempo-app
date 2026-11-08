@@ -1,11 +1,15 @@
+/* BIZ UD Gothic draws "_" below where the line is painted: at normal size it disappears (mot@Idle_01_lp looked like "mot@Idle 01 lp", v0.0.14).
+   Only that one character comes from another font on the computer (unicode-range); the half-width MS Gothic one keeps the monospace columns */
+@font-face{font-family:"Tempo _";src:local("Yu Gothic UI"),local("Meiryo UI"),local("Meiryo");unicode-range:U+5F}
+@font-face{font-family:"Tempo _m";src:local("MS Gothic"),local("Consolas");unicode-range:U+5F}
 :root{
   --bg:#EEF2F3; --panel:#FFFFFF; --panel2:#F7F9FA; --ink:#1B2730; --ink2:#5B6974; --line:#D6DEE2; --line2:#E9EEF0;
-  --accent:#1F6F8B; --accent-ink:#FFFFFF; --weekend:#EEF2F5; --holiday:#FBEDEC; --today:#E0482F;
+  --accent:#1F6F8B; --accent-ink:#FFFFFF; --weekend:#EEF2F5; --holiday:#FBEDEC; --today:#B35900;
   --sat:#2F6BB3; --sun:#C8423A; --sel:#E3F0F5;
   --st-done:#7F8A91; --st-ok:#2E9460; --st-late:#C212BB; --orange:#E08A1E; --st-over:#D0443A; --st-todo:#5C82BE;
   /* fonts on the computer only (v0.0.13): the page works offline and Japanese never falls to a Chinese font. BIZ UD: in Windows since 10; Hiragino: Mac */
-  --font:"BIZ UDPGothic","Yu Gothic UI","Meiryo UI","Hiragino Sans",sans-serif;
-  --mono:"BIZ UDGothic",Consolas,ui-monospace,Menlo,monospace;
+  --font:"Tempo _","BIZ UDPGothic","Yu Gothic UI","Meiryo UI","Hiragino Sans",sans-serif;
+  --mono:"Tempo _m","BIZ UDGothic",Consolas,ui-monospace,Menlo,monospace;
   --rh:34px; --lw:540px; --bar:#1B2730; --bar-ink:#E8EEF1; --bar-off:#AEB7BD;
   --ms-blue:#2F74D0; --ms-red:#D2443A; --ms-green:#3A9A4C; --ms-yellow:#B98100; --ms-purple:#9057C4;
 }
@@ -13,7 +17,7 @@
   :root:not([data-theme="light"]){
     color-scheme:dark;
     --bg:#101619; --panel:#172026; --panel2:#1B252C; --ink:#E3E9ED; --ink2:#95A3AD; --line:#2B3840; --line2:#212C33;
-    --accent:#56A9C6; --accent-ink:#0E1A20; --weekend:#1B262D; --holiday:#2A1F22; --today:#FF6A4D;
+    --accent:#56A9C6; --accent-ink:#0E1A20; --weekend:#1B262D; --holiday:#2A1F22; --today:#B35900;
     --sat:#7FA8E0; --sun:#F08A82; --sel:#1C3643;
     --st-done:#6F7C85; --st-ok:#43B07A; --st-late:#E05FD8; --orange:#EEA040; --st-over:#EC6559; --st-todo:#7C9DD3; --bar-off:#4C5961;
   --ms-blue:#6FA3EA; --ms-red:#F07A70; --ms-green:#6CC07C; --ms-yellow:#F0BE4A; --ms-purple:#B78DE3;
@@ -22,7 +26,7 @@
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#101619; --panel:#172026; --panel2:#1B252C; --ink:#E3E9ED; --ink2:#95A3AD; --line:#2B3840; --line2:#212C33;
-  --accent:#56A9C6; --accent-ink:#0E1A20; --weekend:#1B262D; --holiday:#2A1F22; --today:#FF6A4D;
+  --accent:#56A9C6; --accent-ink:#0E1A20; --weekend:#1B262D; --holiday:#2A1F22; --today:#B35900;
   --sat:#7FA8E0; --sun:#F08A82; --sel:#1C3643;
   --st-done:#6F7C85; --st-ok:#43B07A; --st-late:#E05FD8; --orange:#EEA040; --st-over:#EC6559; --st-todo:#7C9DD3; --bar-off:#4C5961;
   --ms-blue:#6FA3EA; --ms-red:#F07A70; --ms-green:#6CC07C; --ms-yellow:#F0BE4A; --ms-purple:#B78DE3;
@@ -37,7 +41,7 @@ button{cursor:pointer}
 .app{display:flex;flex-direction:column;height:100%;padding-inline:16px;padding-block:12px;gap:10px}
 
 /* toolbar */
-.bar1,.bar2{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.bar1,.bar2{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .brand{font-weight:700;font-size:15px;letter-spacing:.02em;display:flex;align-items:center;gap:8px;margin-right:4px}
 .brand .ver{font-size:11px;font-weight:400;color:var(--ink2);letter-spacing:0;margin-left:-4px}
 /* the title: still; with the pointer on it the three lines of the mark, then the letters, swell one after another (--n = the place in that order, Tempo.html)
@@ -99,13 +103,15 @@ input[type="range"]{accent-color:var(--accent)}
 .topbar .meter{background:rgba(255,255,255,.18)}
 .topbar .meter span{background:#56A9C6}
 .topbar #projSel{font-weight:500;max-width:40vw}
-#refSel{max-width:200px} /* as wide as its longest project name otherwise — the row of controls must stay one row (v0.0.13) */
+#refSel{max-width:150px} /* as wide as its longest project name otherwise — the row of controls must stay one row, 1366 px wide too (v0.0.13, v0.0.14) */
+#chips{column-gap:6px}
+.bar1 .seg button{padding:0 10px}
 .topbar select,.topbar .btn{height:26px;color:var(--ink)}
 #meIn{height:26px;width:140px;border:1px solid var(--line);border-radius:8px;padding:0 8px;font:inherit;color:var(--ink);background:var(--panel)}
 /* search: a magnifier inside the box on the left — after Uiverse.io, escannord "hot-yak-44" (picked by the user) */
 .q{position:relative;display:inline-flex;align-items:center}
 .q svg{position:absolute;left:9px;width:14px;height:14px;fill:var(--accent);pointer-events:none}
-#qIn{height:30px;width:180px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:0 8px 0 30px;color:var(--ink);font:inherit;font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s}
+#qIn{height:30px;width:100px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:0 8px 0 30px;color:var(--ink);font:inherit;font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s}
 #qIn:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
 #qIn::placeholder{color:color-mix(in srgb,var(--ink2) 70%,var(--panel))}
 .mode{font-size:11px;color:var(--ink2)}
@@ -113,14 +119,21 @@ input[type="range"]{accent-color:var(--accent)}
 .stats b{color:var(--ink);font-family:var(--mono);font-weight:500}
 .meter{display:inline-block;width:90px;height:6px;background:var(--line2);border-radius:3px;vertical-align:middle;overflow:hidden;margin-left:6px}
 .meter span{display:block;height:100%;background:var(--accent)}
-.chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border:1px solid var(--line);border-radius:12px;background:var(--panel);font-size:12px}
+.chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 7px;border:1px solid var(--line);border-radius:12px;background:var(--panel);font-size:12px}
 .chip[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--panel))}
 .chip .n{font-family:var(--mono)}
+.chip .x{width:9px;font-size:13px;line-height:1;color:var(--c);text-align:center}
 
 /* chart */
 .chart{flex:1;min-height:0;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;position:relative}
 .grid{position:relative;min-width:100%}
-.hdr,.row{display:grid;grid-template-columns:var(--lw) var(--tw)}
+.chart{--lc:var(--lw)}
+.chart.narrow:not(.list){--lc:max(160px,calc(var(--lw) - 324px))} /* 担当 130 + 開始・終了 50 + 日数 42 + 進捗 52 folded away (v0.0.14) */
+.chart.narrow:not(.list) :is(.c-as,.c-d,.c-n,.c-p,.lwh){display:none} /* folded: no width to drag either; unfold to change it */
+.c-fold{flex:none;align-self:flex-end}.corner>.c-fold{padding:0 4px 4px}
+.fold{height:24px;padding:0 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink2);font-size:11px;white-space:nowrap}
+.fold:hover{border-color:var(--accent);color:var(--accent)}.chart.list .c-fold{display:none}
+.hdr,.row{display:grid;grid-template-columns:var(--lc) var(--tw)}
 .hdr{position:sticky;top:0;z-index:6;background:var(--panel);border-bottom:1px solid var(--line)}
 .corner{position:sticky;left:0;z-index:7;background:var(--panel);display:flex;align-items:flex-end;border-right:1px solid var(--line);font-size:11px;color:var(--ink2)}
 .corner>div{padding:0 6px 6px}
@@ -179,6 +192,7 @@ input[type="range"]{accent-color:var(--accent)}
 .ctx hr{border:0;border-top:1px solid var(--line2);margin:3px 2px}
 .ctxc{display:flex;align-items:center;gap:6px;padding:4px 4px 2px 10px;margin-top:2px;border-top:1px solid var(--line2);font-size:13px;color:var(--ink2)}
 .ctxc input{width:30px;height:22px;padding:0;border:0;background:none;cursor:pointer}
+.ctxc #ctxSh{width:56px;height:24px;padding:0 4px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);cursor:text} /* 日程をずらす (v0.0.14) */
 .rn{flex:1;min-width:0;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--accent);border-radius:4px;padding:1px 4px}
 .pop h3{margin:0;font-size:13px;display:flex;align-items:center;gap:6px}
 .pop .colors{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12px;color:var(--ink2)}
@@ -198,16 +212,17 @@ input[type="range"]{accent-color:var(--accent)}
 .tools .tb.bad.arm{background:var(--st-over);color:#fff}
 .tools .sep2{width:1px;height:20px;background:var(--line);margin:0 3px}
 .tools .selinfo{font-size:12px;color:var(--ink2);margin-left:6px}
-.links{position:absolute;left:var(--lw);top:0;pointer-events:none;z-index:2;overflow:visible}
+.links{position:absolute;left:var(--lc);top:0;pointer-events:none;z-index:2;overflow:visible}
 .links path{fill:none;stroke:var(--ink2);stroke-width:1.3}
 .links path.bad{stroke:var(--st-over)}
 .hc{position:absolute;display:flex;align-items:center;justify-content:center;font-size:11px;white-space:nowrap;overflow:hidden;border-left:1px solid var(--line2)}
-.hc.top{top:0;height:25px;justify-content:flex-start;padding-left:6px;font-weight:700;font-size:12px}
+.hc.top{top:0;height:25px;justify-content:flex-start;padding-left:6px;font-weight:700;font-size:12px;overflow:clip}
+.hc.top span{position:sticky;left:calc(var(--lc) + 6px)} /* stays in sight while its month is (v0.0.14) */
 .hc.bot{top:25px;height:25px;font-family:var(--mono);color:var(--ink2);flex-direction:column;line-height:1.05}
 .hc.bot small{font-family:var(--font);font-size:11px} /* 11 px at least everywhere (docs/ui-checklist.md) */
 .hc.sat{color:var(--sat)} .hc.sun{color:var(--sun)}
 .hc.today{background:var(--today);color:#fff;border-radius:3px}
-.bgl{position:absolute;top:0;bottom:0;left:var(--lw);width:var(--tw);pointer-events:none;z-index:0}
+.bgl{position:absolute;top:0;bottom:0;left:var(--lc);width:var(--tw);pointer-events:none;z-index:0}
 .bgl .off{position:absolute;top:0;bottom:0;background:var(--weekend)}
 .bgl .off.hol{background:var(--holiday)}
 .bgl .vl{position:absolute;top:0;bottom:0;width:1px;background:var(--line2)}
@@ -296,12 +311,12 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .tg{border:0;background:none;width:16px;padding:0;color:var(--ink2);flex:none}
 .tg .fd{display:block;color:var(--pc)}
 .tl{position:relative}
-.bar{--c:var(--st-todo);position:absolute;top:7px;height:20px;border-radius:4px;background:color-mix(in srgb,var(--c) 22%,var(--panel));border:1px solid color-mix(in srgb,var(--c) 75%,var(--panel));overflow:hidden;cursor:grab;touch-action:none;user-select:none}
+.bar{--c:var(--st-todo);position:absolute;top:7px;height:20px;border-radius:4px;background:color-mix(in srgb,var(--c) 22%,var(--panel));border:1px solid color-mix(in srgb,var(--c) 75%,var(--panel));overflow:clip;cursor:grab;touch-action:none;user-select:none}
 .bar .fill{position:absolute;left:0;top:0;bottom:0;background:color-mix(in srgb,var(--c) 70%,var(--panel))}
-.bar .offd{position:absolute;top:0;bottom:0;margin-left:-1px;background:var(--bar-off);opacity:.85;pointer-events:none} /* days off on the bar (view.js offSegs); -1px: the bar's border */
+.bar .offd{position:absolute;top:0;bottom:0;margin-left:-1px;background:repeating-linear-gradient(135deg,var(--bar-off) 0 2px,transparent 2px 5px);pointer-events:none} /* days off on the bar (view.js offSegs); -1px: the bar's border */
 .bar.sum .offd{margin-left:0}
 .c-d .half{font-size:11px;margin-left:1px;color:var(--ink2)} /* ½ = a half day (午後から / 午前まで) */
-.bar .bl{position:absolute;left:6px;right:6px;top:0;line-height:18px;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);pointer-events:none}
+.bar .bl{position:sticky;left:calc(var(--lc) + 6px);display:block;width:max-content;max-width:calc(100% - 12px);margin-left:6px;line-height:18px;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);pointer-events:none}
 .bar .h{position:absolute;top:0;bottom:0;width:7px;cursor:ew-resize}
 .bar .h.l{left:0} .bar .h.r{right:0}
 .bar.dragging{cursor:grabbing;box-shadow:0 2px 8px rgba(0,0,0,.18)}
@@ -316,7 +331,7 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .bar.sum .fill{background:var(--ink2)}
 .ms{--c:var(--st-todo);position:absolute;top:10px;width:14px;height:14px;transform:rotate(45deg);background:var(--c);cursor:grab;touch-action:none;border-radius:2px}
 .who{position:absolute;top:0;line-height:var(--rh);font-size:11px;color:var(--ink2);white-space:nowrap;pointer-events:none}
-.who.gone{visibility:hidden} /* its bar has scrolled away to the left: half a label tells nothing (v0.0.13, ui.js whoGone) */
+.who.gone,.hc.top span.gone,.bar .bl.gone{visibility:hidden} /* its bar has scrolled away to the left: half a label tells nothing (v0.0.13, ui.js whoGone) */
 .st-done{--c:var(--st-done)} .st-ok{--c:var(--st-ok)} .st-late{--c:var(--st-late)} .st-over{--c:var(--st-over)} .st-todo{--c:var(--st-todo)}
 .addrow .lc{color:var(--accent);font-weight:500}
 /* ? beside the status chips: what the bar and status colors mean, on hover / focus (v0.0.13) */
@@ -331,6 +346,7 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .lgb.on{background:linear-gradient(#0163F7,#0148CA)}
 .lgb.late{background:linear-gradient(to left,#C212BB,transparent),linear-gradient(#0163F7,#0148CA)}
 .lgb.over{background:linear-gradient(to left,#F5D90A,transparent),linear-gradient(#E8262B,#C41A1A)}
+.lgb.off{background:repeating-linear-gradient(135deg,#AEB7BD 0 2px,transparent 2px 5px),linear-gradient(#0163F7,#0148CA)}
 .lgb.done{background:color-mix(in srgb,var(--st-done) 40%,var(--panel))}
 .legend .dot{display:inline-block}.legend .hint{font-size:11px}
 /* overlay (v0.0.10, view.js refRows): another project under this one, read-only — a heading row, then its rows faded; nothing to grab */
@@ -391,6 +407,54 @@ body.rowdrag,body.rowdrag *{cursor:grabbing!important}
 .sep{border:0;border-top:1px solid var(--line);margin:4px 0;width:100%}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 14px;border-radius:6px;font-size:12px;z-index:30}
 
+/* メモ (v0.0.14, view.js renderMemo): tabs on top, the page below; while editing, the text on the left and how it looks on the right */
+.app.memo :is(#leafBtn,#refSel,#whoSel,#chips,.lg,#scaleSeg,#todayBtn,#tools){display:none} /* the chart's controls: nothing to do in メモ */
+.chart.memo{overflow:hidden}
+.mv{display:flex;flex-direction:column;height:100%}
+.mhd{display:flex;align-items:flex-end;gap:8px;padding:8px 12px 0;border-bottom:1px solid var(--line);background:var(--panel2)}
+.mhd>.btn{margin-bottom:6px}.mhd>.lk{margin-bottom:8px}
+.mtabs{display:flex;align-items:flex-end;gap:2px;min-width:0;margin-bottom:-1px;overflow:auto hidden} /* -1px: the open tab covers the line under the tabs */
+.mtab{flex:none;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border:1px solid transparent;border-bottom:0;border-radius:8px 8px 0 0;background:transparent;color:var(--ink2);white-space:nowrap}
+.mtab:hover{color:var(--ink);background:color-mix(in srgb,var(--panel) 60%,var(--panel2))}
+.mtab[aria-selected="true"]{background:var(--panel);border-color:var(--line);color:var(--ink);font-weight:600;box-shadow:inset 0 2px var(--accent)}
+.mtab.dim{opacity:.45}
+.mtab .n{min-width:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:600;line-height:18px;text-align:center}
+.mtab.add{padding:0 10px;color:var(--accent);font-size:15px}
+.mhd .rn{margin-bottom:4px}
+.mview{flex:1;min-height:0;overflow:auto;padding:20px 28px}
+.med{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr}
+.med textarea{resize:none;border:0;border-right:1px solid var(--line);padding:16px 18px;font:13px/1.65 var(--mono);background:var(--panel);color:var(--ink);outline:none;tab-size:4}
+.mprev{overflow:auto;padding:16px 24px;background:var(--panel2);outline:none}
+.mtool{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:4px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+.mtool button{height:28px;min-width:28px;padding:0 8px;border:1px solid transparent;border-radius:6px;background:none;color:var(--ink);font-size:13px;cursor:pointer}
+.mtool button:hover{background:var(--panel2);border-color:var(--line)}
+.mtool select{height:28px}
+.med:not(.src){grid-template-columns:1fr}.med:not(.src) textarea{display:none} /* plan 4f: the page only, unless Markdown is switched on */
+.mtool .mdsw{border-color:var(--line);color:var(--ink2)}.mtool .mdsw[aria-pressed="true"]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
+.mtool .sep{width:1px;height:18px;margin:0 4px;background:var(--line)}
+/* how a page looks: modelled on GitHub's Markdown pages (headings with a rule, framed tables, shaded code, a bar on quotes) — Tempo's own rules and colors */
+.md{font-size:14px;line-height:1.7;color:var(--ink);overflow-wrap:anywhere}
+.md>*{max-width:980px}
+.md>:first-child{margin-top:0}
+.md :is(h1,h2,h3,h4,h5,h6){margin:1.4em 0 .6em;line-height:1.3;font-weight:700}
+.md h1{font-size:1.7em;padding-bottom:.3em;border-bottom:1px solid var(--line)}
+.md h2{font-size:1.35em;padding-bottom:.25em;border-bottom:1px solid var(--line)}
+.md h3{font-size:1.15em}.md :is(h4,h5,h6){font-size:1em}.md h6{color:var(--ink2)}
+.md :is(p,ul,ol,table,pre,blockquote){margin:0 0 1em}
+.md :is(ul,ol){padding-left:2em}.md li+li{margin-top:.2em}.md li>:is(ul,ol){margin:.2em 0 0}
+.md li.task{list-style:none;margin-left:-1.4em}.md li.task input{vertical-align:-2px;margin-right:4px}
+.md code{font-family:var(--mono);font-size:.88em;padding:.15em .4em;border-radius:5px;background:color-mix(in srgb,var(--ink2) 14%,var(--panel))}
+.md pre{padding:12px 16px;border-radius:6px;background:color-mix(in srgb,var(--ink2) 10%,var(--panel));overflow:auto;line-height:1.5}
+.md pre code{padding:0;background:none;font-size:.88em}
+.md blockquote{padding:0 1em;border-left:4px solid var(--line);color:var(--ink2)}
+.md blockquote>:last-child{margin-bottom:0}
+.md table{border-collapse:collapse;display:block;width:max-content;max-width:100%;overflow:auto}
+.md :is(th,td){padding:6px 13px;border:1px solid var(--line)}
+.md th{font-weight:600;background:var(--panel2)}
+.md tbody tr:nth-child(2n){background:color-mix(in srgb,var(--panel2) 70%,var(--panel))}
+.md hr{height:3px;margin:1.5em 0;border:0;background:var(--line)}
+.md a{color:var(--accent)}
+.md mark{background:#FFE08A;color:#1B2730;border-radius:2px}.md mark.cur{background:#FFB547;outline:2px solid var(--orange)}
 @media (max-width:760px){
   :root{--lw:230px}
   .c-as,.lc .c-d,.lc .c-n,.corner .c-as,.corner .c-d,.corner .c-n{display:none}

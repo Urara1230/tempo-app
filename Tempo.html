@@ -12,7 +12,7 @@
 
 <div class="app">
   <div class="topbar">
-    <div class="brand"><i aria-hidden="true"><b></b><b style="--n:1"></b><b style="--n:2"></b></i><span role="img" aria-label="Tempo"><b style="--n:3">T</b><b style="--n:4">e</b><b style="--n:5">m</b><b style="--n:6">p</b><b style="--n:7">o</b></span><small class="ver">v0.0.13</small></div>
+    <div class="brand"><i aria-hidden="true"><b></b><b style="--n:1"></b><b style="--n:2"></b></i><span role="img" aria-label="Tempo"><b style="--n:3">T</b><b style="--n:4">e</b><b style="--n:5">m</b><b style="--n:6">p</b><b style="--n:7">o</b></span><small class="ver">v0.0.14</small></div>
     <select id="projSel" aria-label="プロジェクト"></select>
     <div class="stats" id="stats"></div>
     <span class="spacer"></span>
@@ -22,7 +22,7 @@
   </div>
   <div class="bar1">
     <div class="seg" role="group" aria-label="表示">
-      <button type="button" data-view="gantt">ガント</button><button type="button" data-view="list" title="一覧：タイムラインなしで、タスクと成果物を ID・担当・状況・完了で一覧表示">一覧</button>
+      <button type="button" data-view="gantt">ガント</button><button type="button" data-view="list" title="一覧：タイムラインなしで、タスクと成果物を ID・担当・状況・完了で一覧表示">一覧</button><button type="button" data-view="memo" title="メモ：チームの規則などを Markdown で書くページ（プロジェクトごと）">メモ</button>
     </div>
     <button type="button" class="sw" id="leafBtn" title="いちばん上の親タスク（フォルダ）と成果物のタグが付いたタスクだけを表示（ガント・一覧とも）。間の親タスクは成果物の名前にマウスを置くと分かります">成果物のみ</button>
     <select id="refSel" aria-label="重ねて表示" title="別のプロジェクトをガントの下に重ねて表示します（閲覧のみ。選んだプロジェクトはこのブラウザに保存）"></select>
@@ -34,12 +34,13 @@
       <div><i class="lgb late"></i>進捗が遅れている（遅れるほど右端が赤紫に・4 段階）</div>
       <div><i class="lgb over"></i>期限切れ（終了日を過ぎて未完了）</div>
       <div><i class="lgb done"></i>完了</div>
+      <div><i class="lgb off"></i>斜線：休み（土日祝・会社の休日）</div>
       <b>状況の色（名前の前の印・絞り込み・一覧）</b>
       <div><span class="dot st-todo"></span>未着手 <span class="dot st-ok"></span>順調 <span class="dot st-late"></span>進捗遅れ <span class="dot st-over"></span>期限切れ <span class="dot st-done"></span>完了</div>
       <span class="hint">「進捗遅れ」は予定より 10% 以上の遅れ。横条は少しでも遅れると色が付き始めます</span>
     </div></span>
     <span class="spacer"></span>
-    <label class="q"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg><input type="search" id="qIn" placeholder="このプロジェクトを検索" aria-label="タスク名で検索" autocomplete="off"></label>
+    <label class="q"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg><input type="search" id="qIn" placeholder="検索" aria-label="タスク名で検索" title="このプロジェクトのタスクを名前で検索" autocomplete="off"></label>
     <div class="seg" role="group" aria-label="表示単位" id="scaleSeg">
       <button type="button" data-scale="day">日</button><button type="button" data-scale="week">週</button><button type="button" data-scale="month">月</button>
     </div>
@@ -126,7 +127,7 @@
   </form>
 </aside>
 
-<div class="pop ctx" id="ctxMenu" role="menu" hidden><button type="button" role="menuitem" id="ctxRename">名前を変更</button><hr role="separator"><button type="button" role="menuitem" data-ctx="copy">コピー<kbd>Ctrl+C</kbd></button><button type="button" role="menuitem" data-ctx="paste">貼り付け<kbd>Ctrl+V</kbd></button><hr role="separator"><button type="button" role="menuitem" data-ctx="insAbove">上にタスクを挿入</button><button type="button" role="menuitem" data-ctx="insBelow">下にタスクを挿入</button><button type="button" role="menuitem" id="ctxBulk">子タスクを一括追加</button><hr role="separator"><button type="button" role="menuitem" id="ctxDv" title="選択中の、子タスクのないタスクに成果物のタグを付けます／外します">成果物にする</button><hr role="separator"><button type="button" role="menuitem" data-ctx="indent">子タスクにする<kbd>Tab</kbd></button><button type="button" role="menuitem" data-ctx="outdent">階層を上げる<kbd>Shift+Tab</kbd></button><button type="button" role="menuitem" data-ctx="up">上へ移動<kbd>Alt+↑</kbd></button><button type="button" role="menuitem" data-ctx="down">下へ移動<kbd>Alt+↓</kbd></button><div class="ctxc" id="ctxColor" hidden>色<input type="color" id="ctxPc" aria-label="親タスクの色"><button type="button" id="ctxPcOk">決定</button><button type="button" id="ctxPcNone">既定の色</button></div></div>
+<div class="pop ctx" id="ctxMenu" role="menu" hidden><button type="button" role="menuitem" id="ctxRename">名前を変更</button><hr role="separator"><button type="button" role="menuitem" data-ctx="copy">コピー<kbd>Ctrl+C</kbd></button><button type="button" role="menuitem" data-ctx="paste">貼り付け<kbd>Ctrl+V</kbd></button><hr role="separator"><button type="button" role="menuitem" data-ctx="insAbove">上にタスクを挿入</button><button type="button" role="menuitem" data-ctx="insBelow">下にタスクを挿入</button><button type="button" role="menuitem" id="ctxBulk">子タスクを一括追加</button><hr role="separator"><button type="button" role="menuitem" id="ctxDv" title="選択中の、子タスクのないタスクに成果物のタグを付けます／外します">成果物にする</button><hr role="separator"><button type="button" role="menuitem" data-ctx="indent">子タスクにする<kbd>Tab</kbd></button><button type="button" role="menuitem" data-ctx="outdent">階層を上げる<kbd>Shift+Tab</kbd></button><button type="button" role="menuitem" data-ctx="up">上へ移動<kbd>Alt+↑</kbd></button><button type="button" role="menuitem" data-ctx="down">下へ移動<kbd>Alt+↓</kbd></button><div class="ctxc" id="ctxShift" title="選択中のタスク（親タスクは配下すべて）を何日ずらすか。マイナスで前へ。ドラッグと同じく暦日で、関連の後続タスクも順延します">日程をずらす<input type="number" id="ctxSh" value="1" step="1" aria-label="ずらす日数（マイナスで前へ）">日<button type="button" id="ctxShOk">ずらす</button></div><div class="ctxc" id="ctxColor" hidden>色<input type="color" id="ctxPc" aria-label="親タスクの色"><button type="button" id="ctxPcOk">決定</button><button type="button" id="ctxPcNone">既定の色</button></div></div>
 <div class="pop aspop" id="asPop" hidden><div class="ashd"><span id="asHd"></span><button type="button" class="asx" id="asX" aria-label="閉じる" title="閉じる（Esc）">×</button></div><div class="mem" id="asMem" aria-label="担当者を選ぶ"></div><input id="asNew" placeholder="名簿にない名前を入力（Enter）" aria-label="名簿にない名前を入力" autocomplete="off"></div>
 <div id="icoPop" hidden><img alt=""></div>
 <div class="pop pgpop" id="pgPop" hidden><input type="range" id="pgR" min="0" max="100" step="5" aria-label="進捗"><button class="btn" type="button" id="pgBack">戻す</button></div>

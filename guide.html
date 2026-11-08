@@ -56,7 +56,8 @@ ol.steps>li{margin-bottom:6px}
     <li><a href="#overlay">7. 重ねて表示</a></li>
     <li><a href="#milestone">8. マイルストーンと休日</a></li>
     <li><a href="#excel">9. Excel とバックアップ</a></li>
-    <li><a href="#faq">10. 困ったとき</a></li>
+    <li><a href="#memo">10. メモ</a></li>
+    <li><a href="#faq">11. 困ったとき</a></li>
     <li><a href="#admin">付録：管理者向け</a></li>
   </ol>
 </nav>
@@ -145,17 +146,17 @@ ol.steps>li{margin-bottom:6px}
   <tr><td><span class="n">1</span></td><td>プロジェクト</td><td>開くプロジェクトを選びます（👥 = 共有）</td></tr>
   <tr><td><span class="n">2</span></td><td>自分</td><td>自分の名前（<a href="#setup">1-3</a>）</td></tr>
   <tr><td><span class="n">3</span></td><td>保存</td><td>バックアップ先に、今の状態を日時付きのファイルで保存します。左の文字は保存の状態（「このブラウザに保存」「共有フォルダと同期中」など）</td></tr>
-  <tr><td><span class="n">4</span></td><td>ガント｜一覧</td><td>ガントチャートと一覧表の切り替え（<a href="#list">第 6 章</a>）</td></tr>
+  <tr><td><span class="n">4</span></td><td>ガント｜一覧｜メモ</td><td>ガントチャート、一覧表、メモの切り替え（<a href="#list">第 6 章</a>、<a href="#memo">第 10 章</a>）</td></tr>
   <tr><td><span class="n">5</span></td><td>成果物のみ</td><td>フォルダと成果物だけを表示（<a href="#list">第 6 章</a>）</td></tr>
   <tr><td><span class="n">6</span></td><td>重ねて表示</td><td>別のプロジェクトを下に重ねて見比べます（<a href="#overlay">第 7 章</a>）</td></tr>
   <tr><td><span class="n">7</span></td><td>期間・節目・全体進捗</td><td>プロジェクト全体の期間、次のマイルストーンまでの日数、全体の進捗（上部バーのプロジェクト名の右）</td></tr>
   <tr><td><span class="n">8</span></td><td>設定</td><td>名前、メンバー、画面の色、共有フォルダ、バックアップ、Excel などの書き出し・読み込み、プロジェクトの削除（<a href="#setup">第 1 章</a>）。少し左に検索欄（タスク名で探す）</td></tr>
   <tr><td><span class="n">9</span></td><td>担当者で絞り込み</td><td>選んだ人のタスクだけを表示</td></tr>
-  <tr><td><span class="n">10</span></td><td>状態ラベル</td><td>押すとその状態のタスクだけを表示（もう一度押すと解除）。右の「?」にマウスを置くと色の意味が出ます</td></tr>
+  <tr><td><span class="n">10</span></td><td>状態ラベル</td><td>押すとその状態のタスクだけを表示（押したラベルは丸が「×」になり、もう一度押すと解除）。右の「?」にマウスを置くと色の意味が出ます</td></tr>
   <tr><td><span class="n">11</span></td><td>日｜週｜月</td><td>タイムラインの目盛り。右の「今日」で今日の位置へ</td></tr>
   <tr><td><span class="n">12</span></td><td>ツールバー</td><td>元に戻す / ＋ 追加・挿入 / コピー / 階層・移動 / リンク / 担当 / 編集・削除。ボタンにマウスを置くと説明が出ます</td></tr>
-  <tr><td><span class="n">13</span></td><td>タスク表</td><td>タスク名・担当・開始・終了・日数（営業日）・進捗。共有プロジェクトでは左上にロックのスイッチ（<a href="#lock">第 3 章</a>）</td></tr>
-  <tr><td><span class="n">14</span></td><td>タイムライン</td><td>バーで日程を表示。赤い縦線が今日、灰色の背景が土日、色付きが祝日・会社の休日</td></tr>
+  <tr><td><span class="n">13</span></td><td>タスク表</td><td>タスク名・担当・開始・終了・日数（営業日）・進捗。「◂ 列を隠す」でタスク名だけにしてタイムラインを広くできます（「列を表示 ▸」で戻す）。共有プロジェクトでは左上にロックのスイッチ（<a href="#lock">第 3 章</a>）</td></tr>
+  <tr><td><span class="n">14</span></td><td>タイムライン</td><td>バーで日程を表示。オレンジの縦線が今日、灰色の背景が土日、色付きが祝日・会社の休日</td></tr>
 </table>
 
 <h2 id="lock">3. 編集の流れ（共有プロジェクトのロック）</h2>
@@ -258,8 +259,8 @@ ol.steps>li{margin-bottom:6px}
 </table>
 <ul>
   <li>印が丸ではなく<b>四角</b>のタスクは、成果物のタグが付いたタスクです。</li>
-  <li>親タスクは階層ごとに色の帯が付きます（青・青緑・黄）。右クリック →「色」で変えられます。</li>
-  <li>バーの灰色の部分は土日・祝日・会社の休日です（営業日に数えません）。</li>
+  <li>親タスクは階層ごとに色の帯が付きます（青・青緑・黄）。右クリック →「色」で変えられます。配下のタスクがすべて 100% になると、灰色になります。</li>
+  <li>バーの斜線の部分は土日・祝日・会社の休日です（営業日に数えません）。</li>
   <li>◆ は 1 日だけの節目のタスク（マイルストーン）です。</li>
 </ul>
 
@@ -298,13 +299,26 @@ ol.steps>li{margin-bottom:6px}
 <figure><img src="guide/settings-io.png" alt="設定パネルの書き出し・読み込みとバックアップ" width="380" height="805" loading="lazy"></figure>
 <div style="flex:1 1 300px">
 <p><span class="n">1</span><b>Excel（Brabio 形式）</b>：「書き出し」のカードで Excel に保存します。「一覧 Excel（閲覧用）」は Tempo を使わない人への報告用です（Tempo には読み込めません）。</p>
-<p><span class="n">2</span><b>Excel から</b>：「読み込み（置き換え）」のカードで Excel を読み込みます。<b>今のプロジェクトのタスクがすべて置き換わります</b>（間違えたら Ctrl+Z）。</p>
+<p><span class="n">2</span><b>Excel から</b>：「読み込み（置き換え）」のカードで Excel を読み込みます。<b>今のプロジェクトのタスクがすべて置き換わります</b>（間違えたら Ctrl+Z）。メモは変わりません。</p>
 <p><span class="n">3</span><b>バックアップから復元</b>：バックアップのファイル（<code>.backup.json</code>）を選んで元に戻します。ファイルを Tempo の画面にドラッグ＆ドロップしても復元できます。</p>
 <p>バックアップ先の選び方は <a href="#setup">1-5</a> を見てください。</p>
 </div>
 </div>
 
-<h2 id="faq">10. 困ったとき</h2>
+<h2 id="memo">10. メモ（チームの規則）</h2>
+<p>「ガント｜一覧｜<b>メモ</b>」の「メモ」で、命名ルールや納品チェックなど、<b>チームの規則を書いておくページ</b>になります。プロジェクトごとに、Excel のシートのようにページ（タブ）を増やせます。</p>
+<figure><img src="guide/memo.png" alt="メモの画面。1 メモに切り替え、2 ページのタブ、3 編集と削除、4 検索" width="1580" height="773" loading="lazy"><figcaption><span class="n">1</span>「メモ」に切り替え　<span class="n">2</span>ページのタブ（「＋」で追加）　<span class="n">3</span>編集・削除　<span class="n">4</span>メモの中を検索</figcaption></figure>
+<ul>
+  <li><b>書く</b>：ページをダブルクリックするか「編集」。仕上がりの画面でそのまま書き換えられます（チェックボックスもクリックで切り替え）。Markdown の原文は、ボタンの列の右端「Markdown」を押すと左に並びます。上のボタンで見出し（1〜6）・太字・リスト・表（行・列の追加と削除）なども付けられます（最後にカーソルがあった側に効きます）。「完了」（または Esc）で保存。間違えたら Ctrl+Z。</li>
+  <li><b>書き方</b>：Markdown です。<code>#</code> 見出し、<code>-</code> 箇条書き、<code>- [ ]</code> チェックボックス、<code>| 表 |</code>、<code>`コード`</code>、<code>**太字**</code>、<code>&gt;</code> 引用、リンク。改行はそのまま改行になります。</li>
+  <li><b>ページ</b>：タブをクリックで切り替え、ダブルクリックで名前を変更、ドラッグで並べ替え。「削除」は 2 回押します。</li>
+  <li><b>検索</b>：メモを開いているときは、検索欄でメモの中を探します。見つかった所に色が付き、タブに件数が出ます。Enter で次へ。</li>
+  <li><b>共有プロジェクト</b>：全員が読めます。書くときはタスクと同じく、タブの行の左端のスイッチでロックしてから（<a href="#lock">第 3 章</a>）。</li>
+  <li>Excel・JSON の読み込み（置き換え）ではメモは変わりません。バックアップにはメモも入ります。</li>
+</ul>
+<figure><img src="guide/memo-edit.png" alt="メモの編集中。上に書式のボタン、下は仕上がりのまま書き換えられるページ。「Markdown」を押すと左に原文が並ぶ" width="1580" height="773" loading="lazy"><figcaption>編集中：上の書式ボタンで見出し・リスト・表など。「Markdown」を押すと、左に原文が並びます</figcaption></figure>
+
+<h2 id="faq">11. 困ったとき</h2>
 <table>
   <tr><th>困ったこと</th><th>原因と対処</th></tr>
   <tr><td>アイコンが表示されない・付けられない</td><td>共有フォルダにつながっていません（<a href="#setup">1-2</a>）。画面をクリックすると接続を許可するか聞かれることがあります。つながっているのに丸のままのときは、その画像が共有フォルダの <code>data\images\</code> にありません（消された可能性があります）。アイコンを付け直してください</td></tr>

@@ -46,7 +46,7 @@ addEventListener("error",e=>log("error",{msg:String(e.message).slice(0,200),at:S
 addEventListener("unhandledrejection",e=>log("error",errInfo(e.reason)));
 addEventListener("pagehide",()=>{if(logBuf.length)ls.set("mg.log",JSON.stringify(logBuf.slice(-500)))});
 let me=ls.get("mg.me")||""; // who I am, picked from the roster, kept in this browser
-let view={scale:["week","month"].includes(ls.get("mg.scale"))?ls.get("mg.scale"):"day",list:ls.get("mg.view")==="list",ids:ls.get("mg.ids")==="1",leaf:ls.get("mg.leaf")==="1",who:"",st:"",q:""}; // ids: the ID column of 一覧 is open (folded by default) // leaf: 一覧 shows only tasks without sub-tasks // list: 一覧 instead of the chart
+let view={scale:["week","month"].includes(ls.get("mg.scale"))?ls.get("mg.scale"):"day",list:ls.get("mg.view")==="list",memo:ls.get("mg.view")==="memo",ids:ls.get("mg.ids")==="1",leaf:ls.get("mg.leaf")==="1",cols:ls.get("mg.cols")!=="0",who:"",st:"",q:""}; // ids: the ID column of 一覧 is open (folded by default) // leaf: 一覧 shows only tasks without sub-tasks // list: 一覧 instead of the chart
 let visOrder=[];
 let collapsed=new Set(), editingId=null, dragging=false, scrolledFor=null, range=null;
 // overlay (v0.0.10): another project drawn read-only under the open one. mg.ref = open project id → overlaid project id, this browser only.
@@ -81,7 +81,7 @@ function derive(p){
       r.parent=true;
       setH(r,Math.min(...kids.map(hs)),Math.max(...kids.map(he))); // the earliest start and latest end, half days too
       let w=0,sum=0;kids.forEach(k=>{const b=Math.max(.5,bizH(hs(k),he(k)));w+=b;sum+=b*k.progress});
-      r.progress=Math.round(sum/w);
+      r.progress=Math.round(sum/w);if(r.progress>=100&&kids.some(k=>k.progress<100))r.progress=99; // 100% (and 完了) only when every task under it is done, not by rounding
       r.assignees=[...new Set(kids.flatMap(k=>k.assignees))];
     }
     r.st=status(r);
@@ -104,7 +104,7 @@ const roster=p=>p.members||members(p); // until a roster is saved, start from na
 const names=v=>v.split(/[、,，\n]/).map(s=>s.trim()).filter(Boolean);
 
 /* ---------- persistence ---------- */
-function body(p){return{name:p.name,tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[],...(p.members?{members:p.members}:{}),...(p.rev?{rev:p.rev}:{}),updatedAt:p.updatedAt}}
+function body(p){return{name:p.name,tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[],...(p.members?{members:p.members}:{}),...(Array.isArray(p.notes)?{notes:p.notes}:{}),...(p.rev?{rev:p.rev}:{}),updatedAt:p.updatedAt}}
 // does task `from` come, through its links, after task `to`? A link closing such a loop would push both later on every save
 const reach=(byId,from,to,seen=new Set())=>from===to||!seen.has(from)&&(seen.add(from),(byId[from]?.deps||[]).some(d=>reach(byId,d,to,seen)));
 function applyLinks(p){
@@ -119,19 +119,19 @@ function applyLinks(p){
 }
 /* undo: each project keeps snapshots of its state before each save */
 const hist={};let restoring=false;
-const snap=p=>JSON.stringify({name:p.name,tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[],members:p.members||null});
+const snap=p=>JSON.stringify({name:p.name,tasks:p.tasks,milestones:p.milestones||[],holidays:p.holidays||[],members:p.members||null,notes:p.notes||null}); // notes: メモ pages (v0.0.14)
 function H(id){return hist[id]||(hist[id]={u:[],r:[],last:null})}
 function undo(redo){
   const p=projects[curId];if(!p||readOnly)return;log(redo?"redo":"undo",{p:p.id});const h=H(p.id),from=redo?h.r:h.u,to=redo?h.u:h.r;
   if(!from.length){toast(redo?"やり直す操作がありません":"元に戻す操作がありません");return}
-  to.push(h.last);const s=JSON.parse(from.pop());p.name=s.name;p.tasks=s.tasks;p.milestones=s.milestones;p.holidays=s.holidays;p.members=s.members||undefined;
+  to.push(h.last);const s=JSON.parse(from.pop());p.name=s.name;p.tasks=s.tasks;p.milestones=s.milestones;p.holidays=s.holidays;p.members=s.members||undefined;p.notes=s.notes||undefined;
   closeDrawer();if(asEdit){$("asPop").hidden=true;asEdit=null}delArmed=false;restoring=true;save(p);restoring=false;toast(redo?"やり直しました":"元に戻しました");
 }
 // what a save changed, for the log: the ids of the tasks added and removed, for a changed task its id and the names of the fields — no values
 function changes(a,b){const A=JSON.parse(a),B=JSON.parse(b),by=Object.fromEntries(A.tasks.map(t=>[t.id,t])),now=new Set(B.tasks.map(t=>t.id)),js=JSON.stringify,cap=x=>x.length>30?[...x.slice(0,30),"+"+(x.length-30)]:x,o={};
   const add=B.tasks.filter(t=>!by[t.id]).map(t=>t.id),del=A.tasks.filter(t=>!now.has(t.id)).map(t=>t.id);
   const ch=B.tasks.filter(t=>by[t.id]&&js(t)!==js(by[t.id])).map(t=>t.id+":"+[...new Set([...Object.keys(t),...Object.keys(by[t.id])])].filter(k=>js(t[k])!==js(by[t.id][k])).join(","));
-  const etc=["name","milestones","holidays","members"].filter(k=>js(A[k])!==js(B[k]));if(!add.length&&!del.length&&js(A.tasks.map(t=>t.id))!==js(B.tasks.map(t=>t.id)))etc.push("order");
+  const etc=["name","milestones","holidays","members","notes"].filter(k=>js(A[k])!==js(B[k]));if(!add.length&&!del.length&&js(A.tasks.map(t=>t.id))!==js(B.tasks.map(t=>t.id)))etc.push("order");
   if(add.length)o.add=cap(add);if(del.length)o.del=cap(del);if(ch.length)o.ch=cap(ch);if(etc.length)o.etc=etc;return o}
 function save(p){p.updatedAt=Date.now();const m=applyLinks(p);
   const h=H(p.id),cur=snap(p);if(h.last!==cur)log("save",{p:p.id,...(h.last!=null?changes(h.last,cur):{})});if(!restoring&&h.last!=null&&h.last!==cur){h.u.push(h.last);if(h.u.length>50)h.u.shift();h.r=[]}h.last=cur; // ponytail: whole-project snapshots, fine at this size
@@ -154,7 +154,7 @@ function flush(id){
         if(!again)toast(`保存できませんでした（${err&&err.name||"Error"}）。変更はこの画面に残っています。自動で再試行します`);if(!busy())render()}})
     .finally(()=>{if(!timers[id])pendingIds.delete(id)});
 }
-addEventListener("beforeunload",e=>{if(pendingIds.size){e.preventDefault();e.returnValue=""}}); // a change not written yet (the 0.4 s wait, a write under way, a retry): the browser asks before the page closes
+addEventListener("beforeunload",e=>{if(pendingIds.size||memoDirty()){e.preventDefault();e.returnValue=""}}); // a change not written yet (the 0.4 s wait, a write under way, a retry, a メモ page being edited): the browser asks before the page closes
 // all projects from storage (at start, and when changed elsewhere); keeps local edits not yet saved
 function onData(all){
   const next={};

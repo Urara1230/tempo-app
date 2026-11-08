@@ -1,6 +1,6 @@
 // Interactions: drawer forms, members, milestones, popups, context menu, drag & drop, selection, toolbar, keyboard.
 /* ---------- actions ---------- */
-function setCur(id){leaveTask();log("project",{p:id});if(sh.mine&&sh.mine!==id)shEnd();lkArmed=false;lkWas="";view.q=$("qIn").value="";curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
+function setCur(id){leaveTask();leaveMemo();log("project",{p:id});if(sh.mine&&sh.mine!==id)shEnd();lkArmed=false;lkWas="";view.q=$("qIn").value="";curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
 function newProject(){
   if(storeRO)return;
   const id=uid();projects[id]={id,name:"新しいプロジェクト",tasks:[]};setCur(id);save(projects[id]);openProject();
@@ -219,7 +219,7 @@ async function readBackup(f){
 async function restoreBackup(all){
   // keep the state before the restore in one file, overwritten each time: auto.backup.json is about to hold the restored data
   const pre="before-restore.backup.json";let kept=false;if(bk.ok)try{await bkWrite(pre);kept=true}catch(err){}
-  Object.entries(all).forEach(([id,p])=>{projects[id]={id,name:String(p.name||"無題"),tasks:p.tasks,milestones:Array.isArray(p.milestones)?p.milestones:[],holidays:Array.isArray(p.holidays)?p.holidays:[],...(Array.isArray(p.members)?{members:p.members}:{}),...(projects[id]?.shared?{shared:true,rev:projects[id].rev}:{})};save(projects[id])});
+  Object.entries(all).forEach(([id,p])=>{projects[id]={id,name:String(p.name||"無題"),tasks:p.tasks,milestones:Array.isArray(p.milestones)?p.milestones:[],holidays:Array.isArray(p.holidays)?p.holidays:[],...(Array.isArray(p.members)?{members:p.members}:{}),...(Array.isArray(p.notes)?{notes:p.notes}:{}),...(projects[id]?.shared?{shared:true,rev:projects[id].rev}:{})};save(projects[id])});
   closeDrawer();toast(`${Object.keys(all).length} 件のプロジェクトを復元しました`+(kept?`（復元前の状態は ${pre} に保存）`:""));
 }
 $("bk-file").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f||storeRO)return;const all=await readBackup(f);if(all)restoreBackup(all)});
@@ -271,12 +271,15 @@ $("meSel").addEventListener("change",e=>{const s=e.target;if(!s.selectedOptions[
 $("meIn").addEventListener("keydown",e=>{if(e.key!=="Enter"&&e.key!=="Escape")return;e.stopPropagation();const v=e.target.value.trim();e.target.blur();if(e.key==="Enter"&&v)setMe(v)});
 $("meIn").addEventListener("blur",e=>{e.target.hidden=true;$("meSel").hidden=false;render()}); // left without Enter: nothing changes
 $("whoSel").addEventListener("change",e=>{view.who=e.target.value;render()});
-document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>{view.list=b.dataset.view==="list";ls.set("mg.view",view.list?"list":"gantt");render()}));
+document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>{const v=b.dataset.view;if((v==="memo")!==view.memo)view.q=$("qIn").value=""; // the search box finds tasks or notes: emptied when that changes
+  leaveMemo();view.list=v==="list";view.memo=v==="memo";ls.set("mg.view",v);render()}));
 $("leafBtn").addEventListener("click",()=>{view.leaf=!view.leaf;ls.set("mg.leaf",view.leaf?"1":"");render()}); // only the top folders and the tagged tasks (deliverables), in 一覧 and the chart
 $("refSel").addEventListener("change",e=>{const m=refMap();if(e.target.value)m[curId]=e.target.value;else delete m[curId];ls.set("mg.ref",JSON.stringify(m));refFold.clear();render()}); // overlay (v0.0.10): per open project, this browser only
 $("todayBtn").addEventListener("click",scrollToToday);
 document.querySelectorAll("[data-scale]").forEach(b=>b.addEventListener("click",()=>{view.scale=b.dataset.scale;ls.set("mg.scale",view.scale);render()}));
-$("qIn").addEventListener("input",e=>{view.q=e.target.value.trim().toLowerCase();render()}); // search this project by task name
+$("qIn").addEventListener("input",e=>{view.q=e.target.value.trim().toLowerCase();memoHit=-1;render()}); // search this project by task name (in メモ: the notes)
+$("qIn").addEventListener("keydown",e=>{if(e.key!=="Enter"||!view.memo)return;e.preventDefault();const ms=[...document.querySelectorAll("#chart .md mark")];if(!ms.length)return; // メモ: Enter = the next one found on this page
+  memoHit=(memoHit+1)%ms.length;ms.forEach((m,i)=>m.classList.toggle("cur",i===memoHit));ms[memoHit].scrollIntoView({block:"center"})});
 $("chips").addEventListener("click",e=>{const c=e.target.closest("[data-st]");if(!c)return;view.st=view.st===c.dataset.st?"":c.dataset.st;render()});
 
 const FLAG='<svg width="12" height="13" viewBox="0 0 12 13" aria-hidden="true"><path d="M1.5 1v11.5" stroke="var(--ink2)" stroke-width="1.3"/><path d="M2 1.2h8.3l-1.9 2.9 1.9 2.9H2z" fill="var(--mc)"/></svg>';
@@ -321,6 +324,7 @@ const chart=$("chart");
 let whoT=0;chart.addEventListener("scroll",()=>{if(!whoT)whoT=requestAnimationFrame(()=>{whoT=0;whoGone()})},{passive:true});
 chart.addEventListener("click",e=>{
   if(e.target.closest("[data-pg]"))return;
+  if(e.target.closest("[data-cols]")){view.cols=!view.cols;ls.set("mg.cols",view.cols?"":"0");render();return} // ガント: fold / unfold 担当・開始・終了・日数・進捗
   if(e.target.closest("[data-ids]")){view.ids=!view.ids;ls.set("mg.ids",view.ids?"1":"");render();return} // 一覧: fold / unfold the ID column
   const dn=e.target.closest("[data-done]");if(dn){const p=projects[curId],t=p.tasks.find(x=>x.id===dn.dataset.done); // 一覧: 完了 checkbox
     if(t&&!readOnly){t.progress=dn.checked?100:0;save(p);
@@ -328,12 +332,13 @@ chart.addEventListener("click",e=>{
       // back to the old state without motion (.still), then let it go to the new one
       const n=document.querySelector(`[data-done="${CSS.escape(t.id)}"]`);if(n){n.classList.add("still");n.checked=!n.checked;void n.offsetWidth;n.classList.remove("still");n.checked=!n.checked}}
     return}
-  const lk=e.target.closest("[data-lk]");if(lk){const id=curId; // edit lock, the switch in the corner: mine = end editing / nobody's = take it / someone else's = release (twice)
+  const lk=e.target.closest("[data-lk]");if(lk){const id=curId;leaveMemo(); // edit lock, the switch in the corner: mine = end editing / nobody's = take it / someone else's = release (twice)
     if(lk.dataset.lk==="end")shEnd(true).then(ok=>{render();toast(ok?"編集を終了しました":"未保存の変更があります。保存が終わるまで編集を終了できません")});
     else if(lk.dataset.lk==="take")shTake(id).then(()=>{render();toast(sh.bare?"ロックのファイルを作れなかったため、ロックなしで編集します":"編集を始めました（ほかの人は閲覧のみ）")},err=>{render();toast(err.code==="locked"?`${err.by||"ほかの人"}さんが編集中です`:`ロックできませんでした（${err&&err.name||"Error"}）`)}); // the switch, off: lock, read the latest, and editing starts
     else if(!lkArmed){lkArmed=true;render()}
     else{lkArmed=false;shForce(id).then(()=>{render();toast("ロックを解除しました")},()=>toast("ロックを解除できませんでした"))}
     return}
+  if(view.memo&&projects[curId])return memoClick(e);
   const as=e.target.closest("[data-as]");if(as){asEdit&&asEdit.at===as.dataset.as?closeAsPick():openAsPick(as);return}
   const fl=e.target.closest("[data-ms]");if(fl){openMs(null,fl.dataset.ms,e.clientX,e.clientY);return}
   const ht=e.target.closest("#ht");if(ht&&range){const n=range.a+Math.floor((e.clientX-ht.getBoundingClientRect().left)/range.dw);if(n>=range.a&&n<=range.b)openMs(S(n),null,e.clientX,e.clientY);return}
@@ -442,6 +447,105 @@ function rename(id){const p=projects[curId],t=p&&p.tasks.find(x=>x.id===id),tn=d
   inp.addEventListener("keydown",e=>{if(e.key==="Enter")end(true);else if(e.key==="Escape"){e.stopPropagation();end(false)}});
   inp.addEventListener("blur",()=>end(true))}
 
+/* メモ (v0.0.14): Markdown pages of the project in tabs (p.notes = [{id, title, md}], view.js renderMemo). Edited like the tasks: only while the project
+   can be edited (a shared one: under the lock), through save(p) — so undo, the shared folder and the backups carry them. Imports never touch them */
+let memoArm=false,memoHit=-1; // memoArm: 削除 pressed once; memoHit: the search hit Enter went to last
+const memoDirty=()=>!!memoEd&&!!$("noteIn")&&$("noteIn").value!==memoEd.md0;
+function editMemo(){const c=curNote(projects[curId]);if(!c||readOnly)return;memoEd={p:curId,id:c.id,md0:c.md};render();memoSide=mdSrc()?"l":"r";(mdSrc()?$("noteIn"):$("notePrev")).focus()}
+// leaving the page being edited (完了, Esc, another tab / view / project, the lock switch) saves it — one undo step. What can't be saved is not dropped quietly
+function leaveMemo(){if(!memoEd)return;const ed=memoEd,v=$("noteIn")?.value;memoEd=null;if(v==null||v===ed.md0)return;
+  const p=projects[ed.p],n=p&&notesOf(p).find(x=>x.id===ed.id);
+  if(!n||readOnly){navigator.clipboard?.writeText(v).catch(()=>{});toast("メモを保存できなかったため、書いた内容をクリップボードにコピーしました");return}
+  n.md=v;save(p);toast("メモを保存しました（Ctrl+Z で元に戻せます）")}
+function memoClick(e){const p=projects[curId];if(!p)return;const a=e.target.closest("[data-act]")?.dataset.act,t=e.target.closest("[data-note]");
+  if(memoArm&&a!=="noteDel"){memoArm=false;render()}
+  if(t){if(t.dataset.note!==curNote(p)?.id){leaveMemo();pickNote(t.dataset.note);memoHit=-1;render()}return}
+  if(readOnly)return;
+  const k=e.target.closest("[data-md]")?.dataset.md;if(k)return mdTool(k);
+  if(a==="noteAdd"){leaveMemo();const ns=notesOf(p),n={id:uid(),title:"ページ"+(ns.length+1),md:""};p.notes=[...ns,n];pickNote(n.id);save(p);renameNote(n.id)}
+  else if(a==="noteEdit")editMemo();
+  else if(a==="noteDone"){leaveMemo();render()}
+  else if(a==="noteDel"){if(!memoArm){memoArm=true;render();return}memoArm=false;const c=curNote(p);p.notes=notesOf(p).filter(n=>n!==c);save(p);toast("ページを削除しました（Ctrl+Z で元に戻せます）")}}
+// a tab double-clicked: its name in a box (Enter / a click elsewhere = keep, Esc = drop); .rn keeps a sync from redrawing it away (core.js busy)
+function renameNote(id){const n=notesOf(projects[curId]).find(x=>x.id===id),tb=document.querySelector(`#chart [data-note="${CSS.escape(id)}"]`);if(!n||!tb||readOnly)return;
+  const inp=document.createElement("input");inp.className="rn";inp.value=n.title;inp.size=Math.max(8,String(n.title).length+2);inp.setAttribute("aria-label","ページの名前");tb.replaceWith(inp);inp.focus();inp.select();
+  let done=false;const end=ok=>{if(done)return;done=true;const v=inp.value.trim(),p=projects[curId],n=p&&notesOf(p).find(x=>x.id===id);if(ok&&v&&n&&v!==n.title){n.title=v;save(p)}else render()};
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter")end(true);else if(e.key==="Escape"){e.stopPropagation();end(false)}});inp.addEventListener("blur",()=>end(true))}
+function moveNote(id,to,after){const p=projects[curId],ns=notesOf(p),n=ns.find(x=>x.id===id);if(!n||id===to||readOnly)return;const rest=ns.filter(x=>x!==n),k=rest.findIndex(x=>x.id===to);if(k<0)return;
+  rest.splice(after?k+1:k,0,n);p.notes=rest;save(p)}
+// tabs are put in order by dragging them (the browser's own drag and drop), or without the mouse: Alt+← / → on a tab
+let noteDrag=null;
+chart.addEventListener("dragstart",e=>{const t=e.target.closest?.("[data-note]");if(!t||!view.memo||readOnly)return;noteDrag=t.dataset.note;e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain","")});
+chart.addEventListener("dragover",e=>{if(noteDrag&&e.target.closest("[data-note]"))e.preventDefault()});
+chart.addEventListener("drop",e=>{const t=e.target.closest("[data-note]"),id=noteDrag;noteDrag=null;if(!id||!t)return;e.preventDefault();e.stopPropagation(); // not the page's drop (a backup file)
+  const r=t.getBoundingClientRect();moveNote(id,t.dataset.note,e.clientX>r.left+r.width/2)});
+chart.addEventListener("dragend",()=>noteDrag=null);
+chart.addEventListener("keydown",e=>{const t=e.target.closest?.("[data-note]");if(!t||!e.altKey||!["ArrowLeft","ArrowRight"].includes(e.key))return;e.preventDefault();
+  const ns=notesOf(projects[curId]),i=ns.findIndex(x=>x.id===t.dataset.note),j=i+(e.key==="ArrowLeft"?-1:1);if(i<0||j<0||j>=ns.length)return;
+  const id=ns[i].id;moveNote(id,ns[j].id,j>i);document.querySelector(`#chart [data-note="${CSS.escape(id)}"]`)?.focus()});
+chart.addEventListener("input",e=>{const pv=$("notePrev");if(!pv)return;
+  if(e.target.id==="noteIn"){pv.innerHTML=prevHtml(e.target.value);if(view.q)markHits(pv,view.q)} // the preview follows the typing
+  else if(pv.contains(e.target))$("noteIn").value=mdOf(pv)}); // typed (or a box ticked) on the right: the Markdown on the left follows
+// on the right only plain text comes in: pasted text is inserted as text, nothing is dropped in
+chart.addEventListener("paste",e=>{if(!e.target.closest?.("#notePrev"))return;e.preventDefault();document.execCommand("insertText",false,e.clipboardData.getData("text/plain"))});
+chart.addEventListener("drop",e=>{if(e.target.closest?.("#notePrev")){e.preventDefault();e.stopPropagation()}},true);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&(e.target.id==="noteIn"||e.target.closest?.("#notePrev"))){leaveMemo();render()}});
+/* the format buttons (plan 4e): on the side the cursor was in last — on the right the browser's own editing (then mdOf, as for typing), on the left the Markdown marks */
+let memoSide="l",memoRange=null; // memoRange: the cursor on the right, kept while a button or the heading list has the focus
+chart.addEventListener("focusin",e=>{if(e.target.id==="noteIn")memoSide="l";else if(e.target.closest?.("#notePrev"))memoSide="r"});
+document.addEventListener("selectionchange",()=>{const s=getSelection(),pv=$("notePrev");if(pv&&s.rangeCount&&pv.contains(s.anchorNode))memoRange=s.getRangeAt(0).cloneRange()});
+chart.addEventListener("mousedown",e=>{if(e.target.closest("[data-md]"))e.preventDefault()}); // a button doesn't take the cursor away
+chart.addEventListener("change",e=>{if(!e.target.matches("[data-mdh]"))return;const v=e.target.value;e.target.value="";if(v)mdTool("h"+v)});
+const MDTBL="| 見出し1 | 見出し2 | 見出し3 |\n|---|---|---|\n|  |  |  |",notTbl=()=>toast("表の中にカーソルを置いてから押してください");
+function mdTool(k){const pv=$("notePrev"),ta=$("noteIn");if(!pv||!ta)return;let u;
+  if(k==="src"){const on=!mdSrc();ls.set("mg.mdsrc",on?"1":"0");pv.parentElement.classList.toggle("src",on);document.querySelector('[data-md="src"]').setAttribute("aria-pressed",on);if(!on){memoSide="r";pv.focus()}return} // the text stays: only shown or not
+  if(k==="link"){u=prompt("リンク先（https://…）","https://");if(!u||!/^https?:\/\/\S+$/.test(u.trim()))return;u=u.trim()}
+  if(memoSide==="r"){pv.focus();if(memoRange&&pv.contains(memoRange.startContainer)){const s=getSelection();s.removeAllRanges();s.addRange(memoRange)}mdToolR(k,pv,ta,u)}
+  else mdToolL(k,ta,u)}
+const caretIn=s=>{const n=getSelection().anchorNode;return(n?.nodeType===3?n.parentElement:n)?.closest?.(s)}; // the element around the cursor
+function mdToolR(k,pv,ta,u){const ex=(c,v)=>document.execCommand(c,false,v),txt=getSelection().toString(),at=caretIn("li,td,th");
+  const sync=()=>{ta.value=mdOf(pv)};
+  if(/^h\d$/.test(k))return ex("formatBlock",k==="h0"?"<p>":`<h${k[1]}>`);
+  if(k==="b")return ex("bold");if(k==="i")return ex("italic");if(k==="s")return ex("strikeThrough");
+  if(k==="code")return ex("insertHTML",`<code>${esc(txt||"code")}</code>`);
+  if(k==="ul")return ex("insertUnorderedList");if(k==="ol")return ex("insertOrderedList");
+  if(k==="task"){if(!at||at.tagName!=="LI")ex("insertUnorderedList");const li=caretIn("li");
+    if(li&&pv.contains(li)&&!li.querySelector(":scope>input"))li.insertAdjacentHTML("afterbegin",'<input type="checkbox"> ');return sync()}
+  if(k==="quote")return ex("formatBlock","<blockquote>");if(k==="hr")return ex("insertHorizontalRule");
+  if(k==="link")return ex("insertHTML",`<a href="${esc(u)}">${esc(txt||u)}</a>`);
+  if(k==="table")return ex("insertHTML",prevHtml(MDTBL));
+  // a row / column of the table the cursor is in
+  const tb=at?.closest("table");if(!at||at.tagName==="LI"||!tb||!pv.contains(tb))return notTbl();
+  const tr=at.parentElement,ci=at.cellIndex,head=tr.parentElement.tagName==="THEAD";
+  if(k==="trow"){const r=document.createElement("tr");r.innerHTML="<td></td>".repeat(tr.cells.length);if(head)(tb.tBodies[0]||tb.createTBody()).prepend(r);else tr.after(r)}
+  else if(k==="tcol")[...tb.rows].forEach(r=>{const c=document.createElement(r.parentElement.tagName==="THEAD"?"th":"td");r.cells[ci]?r.cells[ci].after(c):r.append(c)});
+  else if(k==="tdrow"){if(head)return toast("見出しの行は削除できません");tr.remove()}
+  else if(k==="tdcol"){[...tb.rows].forEach(r=>r.cells[ci]?.remove());if(!tb.rows[0]?.cells.length)tb.remove()}
+  sync()}
+function mdToolL(k,ta,u){const v=ta.value,s=ta.selectionStart,e=ta.selectionEnd,a=v.lastIndexOf("\n",s-1)+1;let z=v.indexOf("\n",Math.max(s,e>s&&v[e-1]==="\n"?e-1:e));if(z<0)z=v.length;
+  const put=(x,y,t,c0,c1)=>{ta.focus();ta.setSelectionRange(x,y);document.execCommand("insertText",false,t);if(c0!=null)ta.setSelectionRange(x+c0,x+c1)}; // the browser's insert: the box's own Ctrl+Z takes it back
+  const strip=l=>l.replace(/^(\s*)(?:#{1,6}\s+|(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?)/,"$1");
+  const mk=f=>{let i=0;put(a,z,v.slice(a,z).split("\n").map(l=>{const t=strip(l),d=t.match(/^\s*/)[0];return d+f(++i)+t.slice(d.length)}).join("\n"))}; // each line of the selection: its mark replaced
+  if(/^h\d$/.test(k))return put(a,z,v.slice(a,z).split("\n").map(l=>(k==="h0"?"":"#".repeat(k[1])+" ")+strip(l).trimStart()).join("\n"));
+  const w={b:"**",i:"*",s:"~~",code:"`"}[k];if(w){const t=v.slice(s,e)||"文字";return put(s,e,w+t+w,w.length,w.length+t.length)}
+  if(k==="ul")return mk(()=>"- ");if(k==="ol")return mk(i=>i+". ");if(k==="task")return mk(()=>"- [ ] ");
+  if(k==="quote")return put(a,z,v.slice(a,z).split("\n").map(l=>"> "+l).join("\n"));
+  if(k==="hr")return put(z,z,"\n\n---\n");
+  if(k==="link")return put(s,e,`[${v.slice(s,e)||u}](${u})`);
+  if(k==="table")return put(z,z,(z?"\n\n":"")+MDTBL+"\n");
+  // a row / column of the table the cursor is in: the table's lines read as cells and written again
+  const L=v.split("\n"),li=v.slice(0,s).split("\n").length-1;let t0=li,t1=li;if(!L[li].includes("|"))return notTbl();
+  while(t0>0&&L[t0-1].includes("|")&&L[t0-1].trim())t0--;while(t1<L.length-1&&L[t1+1].includes("|")&&L[t1+1].trim())t1++;
+  if(t1===t0||!TS.test(L[t0+1]))return notTbl();
+  const R=L.slice(t0,t1+1).map(x=>x.trim().replace(/^\|/,"").replace(/\|$/,"").split("|").map(c=>c.trim())),r=li-t0,
+    col=Math.min(R[0].length-1,Math.max(0,(v.slice(a,s).match(/\|/g)||[]).length-(L[li].trim().startsWith("|")?1:0)));
+  if(k==="trow")R.splice(Math.max(r,1)+1,0,R[0].map(()=>""));
+  else if(k==="tcol")R.forEach((x,j)=>x.splice(col+1,0,j===1?"---":""));
+  else if(k==="tdrow"){if(r<2)return toast("見出しの行は削除できません");R.splice(r,1)}
+  else if(k==="tdcol")R.forEach(x=>x.splice(col,1));
+  const at=n=>n?L.slice(0,n).join("\n").length+1:0;
+  put(at(t0),at(t1)+L[t1].length,R[0].length?R.map(x=>"| "+x.join(" | ")+" |").join("\n"):"")}
+
 /* long-press a task row, then drop it before / after / into another task.
    When the pressed row is part of a multi-selection, every selected block (with its children) moves, in list order. */
 let rd=null,noClick=false;
@@ -478,18 +582,24 @@ document.addEventListener("pointermove",e=>{if(lwd)setLw(lwd.w=Math.round(Math.m
 document.addEventListener("pointerup",()=>{if(lwd&&lwd.w)ls.set("mg.lw",lwd.w);lwd=null});
 
 /* drag bars */
+// what moves with blocks (indexes of tasks): every task without sub-tasks in them — a parent's dates follow from those
+const movers=(p,is)=>{const leaf=new Set(derive(p).filter(x=>!x.parent).map(x=>x.id));return is.flatMap(i=>p.tasks.slice(i,blockEnd(p.tasks,i)+1)).filter(x=>leaf.has(x.id))};
+// the same without dragging (plan 4g): 右クリック →「日程をずらす N 日」moves the selection (with what is under selected parents) by N calendar days
+function shiftSel(){const p=projects[curId],n=+$("ctxSh").value;if(!p||readOnly)return;if(!Number.isInteger(n)||!n){toast("ずらす日数を整数で入れてください（マイナスで前へ）");return}
+  closeCtx();const ts=movers(p,topBlocks(p));ts.forEach(t=>setH(t,hs(t)+2*n,he(t)+2*n));save(p);
+  toast(`${ts.length} 件のタスクを ${n>0?n+" 日後ろ":-n+" 日前"}へずらしました（Ctrl+Z で元に戻せます）`);if(ts.some(t=>t.id===editingId))openTask(editingId)}
+$("ctxShOk").addEventListener("click",shiftSel);$("ctxSh").addEventListener("keydown",e=>{if(e.key==="Enter")shiftSel()});
 let drag=null;
 chart.addEventListener("pointerdown",e=>{
   const el=e.target.closest("[data-bar]");if(!el||e.button!==0)return;
   const p=projects[curId],t=p.tasks.find(x=>x.id===el.dataset.bar);
   const r=derive(p).find(x=>x.id===el.dataset.bar);
-  if(!t||r.parent||readOnly){drag={click:el.dataset.bar,x0:e.clientX,moved:false};return}
-  const m=e.target.classList.contains("l")?"l":e.target.classList.contains("r")?"r":"m";
-  // moving (not resizing) a bar that is part of a multi-selection moves every selected task, and the tasks under selected parents
-  let ts=[t];
-  if(m==="m"&&sel.has(t.id)&&sel.size>1){const leaf=new Set(derive(p).filter(x=>!x.parent).map(x=>x.id));
-    ts=topBlocks(p).flatMap(i=>p.tasks.slice(i,blockEnd(p.tasks,i)+1)).filter(x=>leaf.has(x.id))}
-  drag={el,t,m,x0:e.clientX,moved:false,items:ts.map(x=>({t:x,s0:hs(x),e0:he(x)}))}; // in half-day slots
+  if(!t||readOnly){drag={click:el.dataset.bar,x0:e.clientX,moved:false};return}
+  const m=e.target.classList.contains("l")?"l":e.target.classList.contains("r")?"r":"m"; // a parent's bar has no ends: always "m"
+  // moving (not resizing) a bar that is part of a multi-selection moves every selected task, and the tasks under selected parents; a parent's bar moves the tasks under it (v0.0.14)
+  let ts=[t];const multi=sel.has(t.id)&&sel.size>1;
+  if(m==="m"&&(multi||r.parent))ts=movers(p,multi?topBlocks(p):[p.tasks.indexOf(t)]);
+  drag={el,t,m,x0:e.clientX,moved:false,sum:r.parent?r:null,items:ts.map(x=>({t:x,s0:hs(x),e0:he(x)}))}; // in half-day slots; sum: the parent's bar follows what is under it
   el.setPointerCapture(e.pointerId);e.preventDefault();
 });
 function paintBar(t,s,en){ // live position of one bar (and its label / date cells) while dragging; s, en = half-day slots
@@ -508,6 +618,7 @@ chart.addEventListener("pointermove",e=>{
   drag.items.forEach(it=>{let s=it.s0,en=it.e0;
     if(it.t.milestone){s+=dd;en+=dd}else if(drag.m==="m"){s+=dh;en+=dh}else if(drag.m==="l"){s=Math.min(it.s0+dh,en)}else{en=Math.max(it.e0+dh,s)} // a ◆ moves by whole days
     it.ns=s;it.ne=en;paintBar(it.t,s,en)});
+  if(drag.sum)paintBar(drag.sum,Math.min(...drag.items.map(it=>it.ns)),Math.max(...drag.items.map(it=>it.ne)));
 });
 function endDrag(e){
   if(!drag)return;const d=drag;drag=null;
@@ -520,7 +631,7 @@ chart.addEventListener("pointerup",endDrag);
 chart.addEventListener("pointercancel",()=>{drag=null;dragging=false;render()});
 
 /* ---------- selection & toolbar ---------- */
-chart.addEventListener("dblclick",e=>{if(e.target.closest("input"))return;if(e.target.closest("[data-as]"))return;const pg=e.target.closest("[data-pg]");if(pg)return openPg(pg);const o=e.target.closest("[data-open],[data-bar]");if(o)openTask(o.dataset.open||o.dataset.bar)});
+chart.addEventListener("dblclick",e=>{if(e.target.closest("input,textarea"))return;if(view.memo){const t=e.target.closest("[data-note]");if(t)renameNote(t.dataset.note);else if(e.target.closest(".mview"))editMemo();return}if(e.target.closest("[data-as]"))return;const pg=e.target.closest("[data-pg]");if(pg)return openPg(pg);const o=e.target.closest("[data-open],[data-bar]");if(o)openTask(o.dataset.open||o.dataset.bar)});
 function selectRow(id,e){
   if(e&&(e.ctrlKey||e.metaKey)){sel.has(id)?sel.delete(id):sel.add(id)}
   else if(e&&e.shiftKey&&lastSel&&visOrder.includes(lastSel)){const a=visOrder.indexOf(lastSel),b=visOrder.indexOf(id);sel=new Set(visOrder.slice(Math.min(a,b),Math.max(a,b)+1))}
@@ -584,7 +695,7 @@ function cmd(c){
 }
 $("tools").addEventListener("click",e=>{const b=e.target.closest("[data-cmd]");if(b&&!b.disabled)cmd(b.dataset.cmd)});
 document.addEventListener("keydown",e=>{
-  if(e.target.closest("input,textarea,select")||!drawer.hidden||!pop.hidden||!bulkPop.hidden||!dropPop.hidden||!ctx.hidden||asEdit||pgEdit||!sel.size)return; // a popup is open: Tab / Enter / Delete belong to it
+  if(view.memo||e.target.closest("input,textarea,select")||!drawer.hidden||!pop.hidden||!bulkPop.hidden||!dropPop.hidden||!ctx.hidden||asEdit||pgEdit||!sel.size)return; // a popup is open: Tab / Enter / Delete belong to it
   const k=e.key,mod=e.ctrlKey||e.metaKey;
   if(mod&&k.toLowerCase()==="c"){cmd("copy");e.preventDefault()}
   else if(mod&&k.toLowerCase()==="v"){cmd("paste");e.preventDefault()}
@@ -597,6 +708,6 @@ document.addEventListener("keydown",e=>{
 });
 
 document.addEventListener("keydown",e=>{
-  if(!(e.ctrlKey||e.metaKey)||e.altKey||e.target.closest("input,textarea,select")||!pop.hidden||drag)return;const k=e.key.toLowerCase();
+  if(!(e.ctrlKey||e.metaKey)||e.altKey||e.target.closest("input,textarea,select,[contenteditable]")||!pop.hidden||drag)return;const k=e.key.toLowerCase();
   if(k==="z"&&!e.shiftKey){undo(false);e.preventDefault()}else if(k==="y"||(k==="z"&&e.shiftKey)){undo(true);e.preventDefault()}
 });
