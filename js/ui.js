@@ -327,7 +327,7 @@ chart.addEventListener("scroll",onScroll(chart,chartRef),{passive:true});chartRe
 chartRef.addEventListener("click",e=>{const rt=e.target.closest("[data-rtg]");if(rt){const id=rt.dataset.rtg;refFold.has(id)?refFold.delete(id):refFold.add(id);render()}}); // the overlay's rows: folding is all they do
 // the divider between the two panes: drag = the upper pane's share (15–85 %), kept in this browser; double-click = half and half
 const refBar=$("refBar"),setSplit=r=>{r=Math.min(.85,Math.max(.15,r));ls.set("mg.split",String(r));$("charts").style.setProperty("--sp",r);refBar.setAttribute("aria-valuenow",Math.round(r*100))};
-refBar.addEventListener("pointerdown",e=>{if(e.button)return;refBar.setPointerCapture(e.pointerId);refBar.classList.add("on");e.preventDefault()});
+refBar.addEventListener("pointerdown",e=>{if(e.button)return;refBar.setPointerCapture(e.pointerId);refBar.classList.add("on");e.preventDefault();refBar.focus()}); // focus: preventDefault would keep it away, and ↑↓ need it (v0.0.17)
 refBar.addEventListener("pointermove",e=>{if(!refBar.classList.contains("on"))return;const b=$("charts").getBoundingClientRect();setSplit((e.clientY-b.top)/b.height)});
 refBar.addEventListener("lostpointercapture",()=>refBar.classList.remove("on"));
 refBar.addEventListener("dblclick",()=>setSplit(.5));
