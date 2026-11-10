@@ -1,6 +1,6 @@
 // Interactions: drawer forms, members, milestones, popups, context menu, drag & drop, selection, toolbar, keyboard.
 /* ---------- actions ---------- */
-function setCur(id){leaveTask();leaveMemo();log("project",{p:id});if(sh.mine&&sh.mine!==id)shEnd();lkArmed=false;lkWas="";view.q=$("qIn").value="";curId=id;ls.set("mg.cur",id||"");closeDrawer();render()}
+function setCur(id){leaveTask();leaveMemo();log("project",{p:id});if(sh.mine&&sh.mine!==id)shEnd();lkArmed=false;lkWas="";view.q=$("qIn").value="";stSave();curId=id;ls.set("mg.cur",id||"");stLoad();closeDrawer();render()} // stSave / stLoad: each project's folding, selection, scroll (v0.0.16)
 function newProject(){
   if(storeRO)return;
   const id=uid();projects[id]={id,name:"新しいプロジェクト",tasks:[]};setCur(id);save(projects[id]);openProject();
@@ -320,8 +320,19 @@ $("msDel").addEventListener("click",e=>{const b=e.currentTarget;if(!b.classList.
   const p=projects[curId];p.milestones=(p.milestones||[]).filter(v=>v.id!==msEdit.id);closeMs();save(p);toast("削除しました")});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!pop.hidden)closeMs()});
 document.addEventListener("pointerdown",e=>{if(!pop.hidden&&!pop.contains(e.target)&&!e.target.closest("#ht"))closeMs()});
-const chart=$("chart");
-let whoT=0;chart.addEventListener("scroll",()=>{if(!whoT)whoT=requestAnimationFrame(()=>{whoT=0;whoGone()})},{passive:true});
+const chart=$("chart"),chartRef=$("chartRef");
+let whoT=0,stT=0;const onScroll=(a,b)=>()=>{if(!b.hidden&&b.scrollLeft!==a.scrollLeft)b.scrollLeft=a.scrollLeft; // two panes (v0.0.16): left-right in step, up-down each on its own
+  if(!whoT)whoT=requestAnimationFrame(()=>{whoT=0;whoGone()});clearTimeout(stT);stT=setTimeout(stSave,300)}; // stSave: the scroll position is kept (v0.0.16)
+chart.addEventListener("scroll",onScroll(chart,chartRef),{passive:true});chartRef.addEventListener("scroll",onScroll(chartRef,chart),{passive:true});
+chartRef.addEventListener("click",e=>{const rt=e.target.closest("[data-rtg]");if(rt){const id=rt.dataset.rtg;refFold.has(id)?refFold.delete(id):refFold.add(id);render()}}); // the overlay's rows: folding is all they do
+// the divider between the two panes: drag = the upper pane's share (15–85 %), kept in this browser; double-click = half and half
+const refBar=$("refBar"),setSplit=r=>{r=Math.min(.85,Math.max(.15,r));ls.set("mg.split",String(r));$("charts").style.setProperty("--sp",r);refBar.setAttribute("aria-valuenow",Math.round(r*100))};
+refBar.addEventListener("pointerdown",e=>{if(e.button)return;refBar.setPointerCapture(e.pointerId);refBar.classList.add("on");e.preventDefault()});
+refBar.addEventListener("pointermove",e=>{if(!refBar.classList.contains("on"))return;const b=$("charts").getBoundingClientRect();setSplit((e.clientY-b.top)/b.height)});
+refBar.addEventListener("lostpointercapture",()=>refBar.classList.remove("on"));
+refBar.addEventListener("dblclick",()=>setSplit(.5));
+refBar.addEventListener("keydown",e=>{const d={ArrowUp:-.05,ArrowDown:.05}[e.key];if(d){e.preventDefault();setSplit(splitR()+d)}}); // without a drag (docs/ui-checklist.md)
+addEventListener("pagehide",stSave);
 chart.addEventListener("click",e=>{
   if(e.target.closest("[data-pg]"))return;
   if(e.target.closest("[data-cols]")){view.cols=!view.cols;ls.set("mg.cols",view.cols?"":"0");render();return} // ガント: fold / unfold 担当・開始・終了・日数・進捗
@@ -397,9 +408,9 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&pgEdit)closePg()});
 const ctx=$("ctxMenu");let ctxId=null;
 // a task icon held under the mouse for 0.2 s: the whole picture beside it (v0.0.12)
 let icoT=0;const icoOff=()=>{clearTimeout(icoT);$("icoPop").hidden=true};
-chart.addEventListener("mouseover",e=>{const i=e.target.closest(".ico");if(!i)return;icoOff();icoT=setTimeout(()=>{const c=imgs[i.dataset.img];if(!c?.url||!i.isConnected)return;const p=$("icoPop"),b=i.getBoundingClientRect();
-  p.firstChild.src=c.url;p.hidden=false;const ph=c.h*Math.min(1,256/c.w,256/c.h)+10;p.style.left=b.right+8+"px";p.style.top=Math.max(8,Math.min(innerHeight-ph-8,b.top+b.height/2-ph/2))+"px"},200)});
-chart.addEventListener("mouseout",e=>{if(e.target.closest(".ico"))icoOff()});
+const icoOver=e=>{const i=e.target.closest(".ico");if(!i)return;icoOff();icoT=setTimeout(()=>{const c=imgs[i.dataset.img];if(!c?.url||!i.isConnected)return;const p=$("icoPop"),b=i.getBoundingClientRect();
+  p.firstChild.src=c.url;p.hidden=false;const ph=c.h*Math.min(1,256/c.w,256/c.h)+10;p.style.left=b.right+8+"px";p.style.top=Math.max(8,Math.min(innerHeight-ph-8,b.top+b.height/2-ph/2))+"px"},200)};
+[chart,chartRef].forEach(c=>{c.addEventListener("mouseover",icoOver);c.addEventListener("mouseout",e=>{if(e.target.closest(".ico"))icoOff()})}); // the overlay's icons too
 chart.addEventListener("contextmenu",e=>{const o=e.target.closest("[data-open]");if(!o||readOnly||e.target.closest("input"))return;e.preventDefault();
   ctxId=o.dataset.open;if(!sel.has(ctxId))selectRow(ctxId);
   const r=derive(projects[curId]).find(x=>x.id===ctxId);$("ctxColor").hidden=!r?.parent; // 色 only for parents
@@ -638,7 +649,7 @@ function selectRow(id,e){
   else sel=new Set([id]);
   lastSel=id;delArmed=false;paintSel();
 }
-function paintSel(){document.querySelectorAll("#chart .row[data-id]").forEach(r=>r.classList.toggle("sel",sel.has(r.dataset.id)||r.dataset.id===editingId));renderTools()}
+function paintSel(){document.querySelectorAll("#chart .row[data-id]").forEach(r=>r.classList.toggle("sel",sel.has(r.dataset.id)||r.dataset.id===editingId));renderTools();stSave()}
 function blockEnd(ts,i){let j=i;while(j+1<ts.length&&(ts[j+1].level||0)>(ts[i].level||0))j++;return j}
 const deep=(ts,d)=>Math.max(...ts.map(t=>(t.level||0)+d))>3; // these tasks, moved d levels in, would pass the 4th level
 function selIdx(p){return p.tasks.map((t,i)=>sel.has(t.id)?i:-1).filter(i=>i>=0)}

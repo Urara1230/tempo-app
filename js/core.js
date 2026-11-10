@@ -57,6 +57,15 @@ const refOf=()=>{const id=refMap()[curId];return typeof id==="string"&&id!==curI
 const pendingIds=new Set(), timers={}, retry={}; // retry: id → saves of it that failed in a row (flush): the change stays on screen and is tried again
 let sel=new Set(), lastSel=null, clip=null, delArmed=false, lkArmed=false, lkWas=""; // lkArmed: someone else's lock pressed once; lkWas: the lock switch as last drawn ("true" / "false", view.js lockBar)
 let chain=Promise.resolve();
+/* page state per project, this browser only (v0.0.16): the folded parents (here and in the overlay), the selection and where the chart was scrolled —
+   back after a reload or a switch of project. mg.st.<project id> = {f, r, s, x, y, y2 (the overlay pane)}; not project data, so nobody else's screen changes and no lock is needed */
+let stPos=null; // scroll to put back on the project's first drawing
+function stLoad(){let o={};try{o=JSON.parse(ls.get("mg.st."+curId))||{}}catch(e){}const a=v=>Array.isArray(v)?v.map(String):[];
+  collapsed=new Set(a(o.f));refFold=new Set(a(o.r));sel=new Set(a(o.s));stPos=Number.isFinite(o.x)&&Number.isFinite(o.y)?[o.x,o.y,Number.isFinite(o.y2)?o.y2:0]:null}
+function stSave(){if(!curId||!store)return;let o={};try{o=JSON.parse(ls.get("mg.st."+curId))||{}}catch(e){}const c=$("chart");
+  if(!view.memo&&c.querySelector(".grid")){o.x=c.scrollLeft;o.y=c.scrollTop;if(!$("chartRef").hidden)o.y2=$("chartRef").scrollTop} // メモ scrolls its own page: keep the chart's
+  o.f=[...collapsed];o.r=[...refFold];o.s=[...sel];ls.set("mg.st."+curId,JSON.stringify(o))}
+stLoad();
 
 // share of the task's own workdays already past (to yesterday), 0–1
 function elapsed(t){return TODAY<D(t.start)?0:Math.min(1,bizH(hs(t),2*TODAY-1)/Math.max(.5,bizH(hs(t),he(t))))}
@@ -164,7 +173,7 @@ function onData(all){
     else{next[id]=p;if(h){h.last=snap(p);if(store===backends.local)h.u=[],h.r=[]}}}); // changed elsewhere: Ctrl+Z here must not take that change away. Not in the cloud: its echo of my own save may come back with keys in another order
   pendingIds.forEach(id=>{if(projects[id])next[id]=projects[id]; else delete next[id]});
   projects=next;
-  if(!projects[curId])curId=Object.keys(projects)[0]||null;
+  if(!projects[curId]){curId=Object.keys(projects)[0]||null;stLoad()}
   if(!busy())render();
 }
 // a short message at the bottom: read out by screen readers (role=status); a long one stays longer so it can be read through (v0.0.13: 3 s / 5 s)

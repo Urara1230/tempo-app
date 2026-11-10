@@ -126,6 +126,14 @@ input[type="range"]{accent-color:var(--accent)}
 
 /* chart */
 .chart{flex:1;min-height:0;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;position:relative}
+/* overlay in two panes (v0.0.16, view.js splitOn): this project above, the overlaid one below, each scrolling up and down on its own; the divider sets the share (mg.split) */
+.charts{flex:1;min-height:0;display:flex;flex-direction:column}
+.charts.split>.chart{flex:var(--sp) 1 0;scrollbar-gutter:stable} /* the same width on both: their left-right scrolls stay in step */
+.charts.split>#chartRef{flex-grow:calc(1 - var(--sp))}
+.refbar{flex:none;height:12px;cursor:row-resize;touch-action:none;position:relative}
+.refbar::before{content:"";position:absolute;left:calc(50% - 20px);top:5px;width:40px;height:2px;border-radius:1px;background:var(--ink2)}
+.refbar:hover::before,.refbar.on::before,.refbar:focus-visible::before{background:var(--accent)}
+#chartRef .row.refhd{position:sticky;top:0;z-index:5;background:var(--panel)} /* the overlaid project's name stays in sight */
 .grid{position:relative;min-width:100%}
 .chart{--lc:var(--lw)}
 .chart.narrow:not(.list){--lc:max(160px,calc(var(--lw) - 324px))} /* 担当 130 + 開始・終了 50 + 日数 42 + 進捗 52 folded away (v0.0.14) */

@@ -168,11 +168,11 @@ function refRows(rp,all,rms,X,XH,dw){
 function render(){
   const p=projects[curId];if(p&&H(p.id).last==null)H(p.id).last=snap(p); // undo starts from the state first shown
   renderToolbar();renderTools();syncForm();
-  const chart=$("chart");
+  const chart=$("chart");if(!store||!p||view.memo)splitOn(false);
   if(!store){chart.innerHTML=`<div class="empty"><i class="spin"></i>読み込み中…</div>`;return}
   if(!p){chart.innerHTML=`<div class="empty"><div>プロジェクトがまだありません。</div><button class="btn pri" type="button" data-act="newproj">プロジェクトを作成</button></div>`;return}
   chart.classList.toggle("memo",view.memo);if(view.memo)return renderMemo(p);
-  const all=derive(p);
+  const all=derive(p);if(sel.size){const ids=new Set(all.map(r=>r.id));sel.forEach(id=>{if(!ids.has(id))sel.delete(id)})} // a kept selection (v0.0.16) whose task is gone
   const sc=view.scale, list=view.list, dw=sc==="day"?30:sc==="week"?12:4;
   const rp=list?null:refOf(),ra=rp?derive(rp):[],rms=(rp?.milestones||[]).filter(m=>m&&isDay(m.date));ra.forEach(r=>r.ref=1); // overlay (v0.0.10); r.ref: no progress button in lab()
   let mn=TODAY,mx=TODAY;[...all,...ra].forEach(r=>{mn=Math.min(mn,D(r.start));mx=Math.max(mx,D(r.end))});[...(p.milestones||[]),...rms].forEach(m=>{mn=Math.min(mn,D(m.date));mx=Math.max(mx,D(m.date))});
@@ -250,7 +250,6 @@ function render(){
       <div class="tl">${mark}</div></div>`;
   });
   if(!readOnly)rowsHtml+=`<div class="row addrow"><div class="lc" data-act="add"><div class="c-name" style="padding-left:12px">＋ タスクを追加</div></div><div class="tl"></div></div>`;
-  if(rp)rowsHtml+=refRows(rp,ra,rms,X,XH,dw);
 
   visOrder=vis;
   let lk="";const H0=75;
@@ -258,7 +257,9 @@ function render(){
     const x1=XH(A.h1+1),x2=XH(B.h0),up=B.i<A.i,y1=H0+A.y+(up?-10:10),y2=H0+B.y,xv=Math.min(x1-6,x2-10);
     lk+=`<path class="${B.h0<=A.h1?"bad":""}" d="M${xv} ${y1}V${y2}H${x2-1}" marker-end="url(#lk-arrow)"/>`;}));
   const linksSvg=lk?`<svg class="links" width="${tw}" height="${H0+rowY+RH}"><defs><marker id="lk-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--ink2)" stroke="none"/></marker></defs>${lk}</svg>`:"";
-  const sl=chart.scrollLeft,st=chart.scrollTop;
+  const cr=$("chartRef"),sl=chart.scrollLeft,st=chart.scrollTop,st2=cr.scrollTop;splitOn(!!rp);
+  cr.classList.toggle("noid",!view.ids);cr.classList.toggle("narrow",!view.cols);
+  cr.innerHTML=rp?`<div class="grid" style="--tw:${tw}px;width:calc(var(--lc) + ${tw}px)"><div class="bgl" style="${bgStyle}">${bg}</div>${refRows(rp,ra,rms,X,XH,dw)}</div>`:""; // the lower pane: no date header, the upper one's is shared
   chart.classList.toggle("list",list); // 一覧: the same table without the timeline (tempo.css)
   chart.classList.toggle("noid",!view.ids);
   chart.classList.toggle("narrow",!view.cols); // ガント: 担当・開始・終了・日数・進捗 folded away, the task names only (v0.0.14)
@@ -266,9 +267,14 @@ function render(){
     <div class="bgl" style="${bgStyle}">${bg}</div>
     <div class="hdr"><div class="corner"><div class="c-name" style="flex:1;flex-direction:column;align-items:flex-start;gap:6px">${lockBar(p)}<small style="color:var(--ink2);font-size:11px">マイルストーン ▶</small>タスク</div><div class="c-fold"><button type="button" class="fold" data-cols title="${view.cols?"担当・開始・終了・日数・進捗の列を隠して、タイムラインを広くします":"担当・開始・終了・日数・進捗の列を表示します"}" aria-expanded="${view.cols}">${view.cols?"◂ 列を隠す":"列を表示 ▸"}</button></div><div class="c-as"><i class="lwh lwn" title="ドラッグでタスク列の幅を変更"></i>担当</div><div class="c-d">開始</div><div class="c-d">終了</div><div class="c-n" title="営業日">日数</div><div class="c-p">進捗</div><div class="c-id"><button type="button" class="tg" data-ids title="${view.ids?"ID の列を折りたたむ":"ID の列を表示"}" aria-label="ID の列の表示切り替え">${view.ids?"◂":"▸"}</button><span>ID</span></div><div class="c-st">状況</div><div class="c-done">完了</div><i class="lwh" title="ドラッグで幅を変更"></i></div><div class="ht" id="ht"><div class="band"></div>${top}${bot}${hint}${flags}</div></div>
     ${rowsHtml}${linksSvg}</div>`;
-  if(scrolledFor!==curId+sc+list){scrolledFor=curId+sc+list;scrollInitial()}else{chart.scrollLeft=sl;chart.scrollTop=st;whoGone()}
-  lockMove(chart);
+  if(scrolledFor!==curId+sc+list){scrolledFor=curId+sc+list;if(stPos){chart.scrollLeft=stPos[0];chart.scrollTop=stPos[1];cr.scrollTop=stPos[2];stPos=null}else scrollInitial()} // stPos: where it was before a reload / a switch of project (v0.0.16)
+  else{chart.scrollLeft=sl;chart.scrollTop=st;cr.scrollTop=st2}
+  cr.scrollLeft=chart.scrollLeft;whoGone();
+  lockMove(chart);stSave();
 }
+// overlay in two panes (v0.0.16): the lower pane and its divider show only while a project is overlaid on the chart; the upper pane's share is kept in mg.split
+const splitR=()=>{const v=+ls.get("mg.split");return v>=.15&&v<=.85?v:.5};
+function splitOn(on){const w=$("charts");w.classList.toggle("split",on);$("refBar").hidden=$("chartRef").hidden=!on;if(on){w.style.setProperty("--sp",splitR());$("refBar").setAttribute("aria-valuenow",Math.round(splitR()*100))}else $("chartRef").innerHTML=""}
 // the lock switch changed since the last drawing: lockBar drew its old state, now it moves
 function lockMove(c){const lb=c.querySelector(".sw.lock");if(lb&&lb.getAttribute("aria-pressed")!==lb.dataset.on){void lb.offsetWidth;lb.setAttribute("aria-pressed",lb.dataset.on)}}
 // today (or the project's start) about a quarter of the way into the visible timeline, so the days just before it show too (v0.0.13; was 120 px)
@@ -277,6 +283,6 @@ function scrollToToday(){if(!range)return;const c=$("chart");c.scrollLeft=Math.m
 function scrollInitial(){const p=projects[curId],o=p&&overall(p);if(!o||!o.rows.length||!range)return scrollToToday();
   const target=(TODAY>=o.mn-7&&TODAY<=o.mx+7)?TODAY:o.mn;$("chart").scrollLeft=Math.max(0,(target-range.a)*range.dw-lead());whoGone()}
 // a bar label whose start has scrolled away under the task table is hidden: half a label tells nothing (v0.0.13). Run after drawing and on scroll (ui.js)
-function whoGone(){const c=$("chart"),s=c.scrollLeft;c.querySelectorAll(".tl .who").forEach(w=>w.classList.toggle("gone",parseFloat(w.style.left)<s));
+function whoGone(){const c=$("chart"),s=c.scrollLeft,ps=[c,$("chartRef")];ps.forEach(p=>p.querySelectorAll(".tl .who").forEach(w=>w.classList.toggle("gone",parseFloat(w.style.left)<s)));
   // a month label / a bar's name sticks right of the task table (v0.0.14); where its month or bar shows too little of it, it would be cut: hidden too. Read all, then write
-  const e=c.querySelector(".corner")?.getBoundingClientRect().right;if(e==null)return;const ls=[...c.querySelectorAll("#ht .hc.top span,.tl .bl")],cut=ls.map(l=>l.getBoundingClientRect().left<e-1);ls.forEach((l,i)=>l.classList.toggle("gone",cut[i]))}
+  const e=c.querySelector(".corner")?.getBoundingClientRect().right;if(e==null)return;const ls=ps.flatMap(p=>[...p.querySelectorAll("#ht .hc.top span,.tl .bl")]),cut=ls.map(l=>l.getBoundingClientRect().left<e-1);ls.forEach((l,i)=>l.classList.toggle("gone",cut[i]))}
