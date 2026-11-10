@@ -145,12 +145,14 @@ function changes(a,b){const A=JSON.parse(a),B=JSON.parse(b),by=Object.fromEntrie
 function save(p){p.updatedAt=Date.now();const m=applyLinks(p);
   const h=H(p.id),cur=snap(p);if(h.last!==cur)log("save",{p:p.id,...(h.last!=null?changes(h.last,cur):{})});if(!restoring&&h.last!=null&&h.last!==cur){h.u.push(h.last);if(h.u.length>50)h.u.shift();h.r=[]}h.last=cur; // ponytail: whole-project snapshots, fine at this size
   render();queue(p.id);if(m)toast("リンク先のタスクを後ろにずらしました")}
-function queue(id){backupSoon();pendingIds.add(id);clearTimeout(timers[id]);timers[id]=setTimeout(()=>flush(id),400)}
+// the label at the top while saving (v0.0.18): 1 = 保存中…, 2 = ✓ 保存しました for 1.5 s, then the usual text (view.js modeShow)
+let saveSt=0,saveT=0;const saveMark=v=>{saveSt=v;clearTimeout(saveT);if(v===2)saveT=setTimeout(()=>saveMark(0),1500);modeShow()};
+function queue(id){backupSoon();pendingIds.add(id);saveMark(1);clearTimeout(timers[id]);timers[id]=setTimeout(()=>flush(id),400)}
 function flush(id){
   delete timers[id];
-  const p=projects[id];
+  const p=projects[id];let ok=false; // ok: written — only then the label says so (a refused save is not a save)
   chain=chain.then(()=>p?store.put(id,body(p)):store.remove(id))
-    .then(()=>{if(retry[id]){log("save-retry-ok",{p:id,after:retry[id]});delete retry[id];toast("保存しました");if(!busy())render()}})
+    .then(()=>{ok=true;if(retry[id]){log("save-retry-ok",{p:id,after:retry[id]});delete retry[id];toast("保存しました");if(!busy())render()}})
     .catch(err=>{const again=retry[id];delete retry[id];log("save-fail",{p:id,try:(again||0)+1,...errInfo(err)});
       if(err&&err.code==="invalid_argument"){storeRO=true;render();toast("編集権限がないため保存できません");}
       else if(err&&err.name==="QuotaExceededError")toast("ブラウザに保存できませんでした（保存領域がいっぱいです）。「保存」でバックアップを取り、使わないプロジェクトを削除してください");
@@ -161,7 +163,7 @@ function flush(id){
         // (a sync won't swap it for the file's content), and is tried again: after 1 s, then 2, 3, 4, and every 5 s
         console.error(err);retry[id]=(again||0)+1;if(!timers[id])timers[id]=setTimeout(()=>flush(id),Math.min(retry[id],5)*1000);
         if(!again)toast(`保存できませんでした（${err&&err.name||"Error"}）。変更はこの画面に残っています。自動で再試行します`);if(!busy())render()}})
-    .finally(()=>{if(!timers[id])pendingIds.delete(id)});
+    .finally(()=>{if(!timers[id])pendingIds.delete(id);if(!pendingIds.size)saveMark(ok&&!Object.keys(retry).length?2:0)});
 }
 addEventListener("beforeunload",e=>{if(pendingIds.size||memoDirty()){e.preventDefault();e.returnValue=""}}); // a change not written yet (the 0.4 s wait, a write under way, a retry, a メモ page being edited): the browser asks before the page closes
 // all projects from storage (at start, and when changed elsewhere); keeps local edits not yet saved
@@ -176,5 +178,6 @@ function onData(all){
   if(!projects[curId]){curId=Object.keys(projects)[0]||null;stLoad()}
   if(!busy())render();
 }
-// a short message at the bottom: read out by screen readers (role=status); a long one stays longer so it can be read through (v0.0.13: 3 s / 5 s)
-function toast(msg){document.querySelectorAll(".toast").forEach(x=>x.remove());const t=document.createElement("div");t.className="toast";t.setAttribute("role","status");t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),msg.length>30?5000:3000)}
+// a short message at the bottom; a long one stays longer so it can be read through (v0.0.13: 3 s / 5 s). Screen readers read it from #live, which is
+// always on the page (v0.0.18: a status region added together with its text is often not read out)
+function toast(msg){document.querySelectorAll(".toast").forEach(x=>x.remove());const t=document.createElement("div");t.className="toast";t.setAttribute("aria-hidden","true");t.textContent=msg;document.body.appendChild(t);$("live").textContent=msg;setTimeout(()=>t.remove(),msg.length>30?5000:3000)}

@@ -85,7 +85,7 @@ select{padding-right:4px}
 /* checkboxes: a thin box that turns into the tick itself — it narrows, turns 45° and lets its top and left sides fade, so the two sides left are the tick
    — after Uiverse.io, PriyanshuGupta28 "quick-wolverine-69" (picked by the user). The box is the input's ::before; the input keeps its 16px so nothing beside it moves */
 input[type="checkbox"]{appearance:none;flex:none;width:16px;height:16px;margin:0;border:0;background:none;position:relative;cursor:pointer;vertical-align:middle}
-input[type="checkbox"]::before{content:"";box-sizing:border-box;position:absolute;left:0;top:0;width:16px;height:16px;border:2px solid color-mix(in srgb,var(--ink2) 60%,var(--panel));border-radius:4px;transition:all .375s}
+input[type="checkbox"]::before{content:"";box-sizing:border-box;position:absolute;left:0;top:0;width:16px;height:16px;border:2px solid color-mix(in srgb,var(--ink2) 60%,var(--panel));border-radius:4px;transition:left .375s,top .375s,width .375s,height .375s,transform .375s,border-color .375s,border-radius .375s} /* the box turning into a tick: these move (not all: v0.0.18) */
 input[type="checkbox"]:hover:not(:disabled):not(:checked)::before{border-color:var(--accent)}
 input[type="checkbox"]:checked::before{left:5px;top:-1px;width:7px;height:13px;transform:rotate(45deg);border-color:transparent var(--accent) var(--accent) transparent;border-radius:0}
 input[type="checkbox"].still::before{transition:none} /* ui.js: a redrawn 完了 box is set back to its old state without motion, so the change itself can be shown */
@@ -96,6 +96,10 @@ input[type="range"]{accent-color:var(--accent)}
 /* top bar, after Brabio: dark strip with the brand and the open project; storage state, 保存 and 自分 on the right */
 .topbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:-12px -16px 0;padding:6px 16px;background:var(--bar);color:var(--bar-ink)}
 .topbar .brand .ver,.topbar .mode{color:#9FB0BA}
+.topbar .mode .spin.mini{display:inline-block;width:10px;height:10px;border:2px solid currentColor;border-left-color:transparent;margin-right:4px;vertical-align:-1px}
+.topbar .mode .ok{margin-right:4px;color:#6FCF97} /* written (v0.0.18) */
+@media (prefers-reduced-motion:reduce){.spin.mini{animation:none}}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap} /* read by screen readers only */
 .topbar .mode.warn{color:#F2A33C;font-weight:700} /* a save failed and is being tried again */
 /* v0.0.13: 期間・次の節目・全体進捗 sit in the dark bar, next to the project they are about — one row less above the chart */
 .topbar .stats{color:#9FB0BA;margin-left:4px}

@@ -152,7 +152,7 @@ async function shRead(){
   if(sig!==sh.sig){sh.sig=sig;ch=true}
   return ch}
 async function shBeat(){if(!sh.mine||Date.now()-sh.beat<30e3)return; // keep my lock while I'm active, let it go after 2 min without a click or key
-  if(Date.now()-sh.act>=LOCK_MS){log("idle");return shUnlockNow()}
+  if(Date.now()-sh.act>=LOCK_MS){log("idle");leaveTask();leaveMemo();shEnd().then(()=>render());return} // leaveTask / leaveMemo + shEnd: a task panel half changed, a メモ page half written is saved while the lock is still mine, then the lock goes (v0.0.18; was let go at once, the page then read-only and unsaved)
   const ld=await shDir("locks"),old=(await lkList(ld)).mine[sh.mine];if(!old&&!sh.bare)return; // gone: shRead, right after, sees it
   try{await lkMake(ld,sh.mine)}catch(e){if(sh.bare)sh.beat=Date.now();return} // the file with the old time is still good for a while: at the next look. Without a lock file: tried again every 30 s
   if(sh.bare)log("lock",{p:sh.mine,late:true});sh.bare=false;await lkDrop(ld,old);sh.beat=Date.now()}

@@ -15,12 +15,12 @@ const mdIn=s=>{const code=[];s=esc(s).replace(/`([^`]+)`/g,(_,c)=>`\u0000${code.
     .replace(/\u0000(\d+)\u0000/g,(_,i)=>`<code>${code[i]}</code>`)};
 const LI=/^(\s*)([-*+]|\d+[.)])\s+(.*)$/,HR=/^\s*([-*_])(\s*\1){2,}\s*$/,TS=/^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
 // a list: an item's deeper lines are a list inside it, or more of its text; - [ ] / - [x] are shown ticked or not (changed only by editing)
-function mdList(b){const ord=/^\s*\d/.test(b[0]),base=b[0].match(/^\s*/)[0].length;let h="",i=0;
+function mdList(b){const ord=/^\s*\d/.test(b[0]),st=ord?parseInt(b[0],10):1,base=b[0].match(/^\s*/)[0].length;let h="",i=0;
   while(i<b.length){const m=LI.exec(b[i]);let t=m?m[3]:b[i].trim();i++;const sub=[],more=[];
     while(i<b.length&&b[i].match(/^\s*/)[0].length>base)sub.push(b[i++]);while(sub.length&&!LI.test(sub[0]))more.push(sub.shift().trim());
     const c=/^\[([ xX])\]\s+(.*)$/.exec(t);if(c)t=c[2];
     h+=`<li${c?' class="task"':""}>${c?`<input type="checkbox" disabled${c[1]===" "?"":" checked"}> `:""}${[t,...more].map(mdIn).join("<br>")}${sub.length?mdList(sub):""}</li>`}
-  return(ord?"<ol>":"<ul>")+h+(ord?"</ol>":"</ul>")}
+  return(ord?`<ol${st!==1?` start="${st}"`:""}>`:"<ul>")+h+(ord?"</ol>":"</ul>")} // start: a list from 10. shows 10. (v0.0.18)
 // blocks: ``` code, # headings, ---, > quotes, | tables |, lists, paragraphs (a line break stays a line break)
 function mdHtml(src){const L=String(src??"").replace(/\r\n?/g,"\n").split("\n"),tbl=k=>k+1<L.length&&L[k].includes("|")&&L[k+1].includes("-")&&TS.test(L[k+1]);let h="",i=0,m;
   const cells=s=>s.trim().replace(/^\|/,"").replace(/\|$/,"").split("|");
@@ -44,7 +44,7 @@ function mdOf(el){
     return t==="BR"?"\n":t==="STRONG"||t==="B"?w("**"):t==="EM"||t==="I"?w("*"):/^(DEL|S|STRIKE)$/.test(t)?w("~~"):t==="CODE"?(c.textContent?"`"+c.textContent+"`":"")
       :t==="A"?(c.getAttribute("href")===s?s:`[${s}](${c.getAttribute("href")})`):/^(INPUT|UL|OL)$/.test(t)?"":s}).join("");
   const list=(n,d)=>[...n.children].filter(li=>li.tagName==="LI").map((li,i)=>{const b=li.querySelector(":scope>input"),ind="  ".repeat(d);
-    return[ind+(n.tagName==="OL"?`${i+1}. `:"- ")+(b?`[${b.checked?"x":" "}] `:"")+inl(li).trim().replace(/\n/g,"\n"+ind+"  "),...[...li.children].filter(c=>/^(UL|OL)$/.test(c.tagName)).map(c=>list(c,d+1))].join("\n")}).join("\n");
+    return[ind+(n.tagName==="OL"?`${n.start+i}. `:"- ")+(b?`[${b.checked?"x":" "}] `:"")+inl(li).trim().replace(/\n/g,"\n"+ind+"  "),...[...li.children].filter(c=>/^(UL|OL)$/.test(c.tagName)).map(c=>list(c,d+1))].join("\n")}).join("\n");
   const blk=n=>{if(n.nodeType!==1)return n.nodeType===3?n.data.trim():"";const t=n.tagName;
     if(/^H[1-6]$/.test(t))return"#".repeat(t[1])+" "+inl(n).replace(/\n/g," ").trim();
     if(t==="UL"||t==="OL")return list(n,0);
@@ -86,12 +86,13 @@ function renderMemo(p){const chart=$("chart"),ns=notesOf(p),cur=curNote(p),q=vie
     :`<div class="md mview" role="tabpanel"${readOnly?"":` title="ダブルクリックで編集"`}>${mdHtml(cur.md)||`<p class="hint">${readOnly?"このページは空です":"空のページです。ダブルクリックか「編集」で書き始めます"}</p>`}</div>`}</div>`;
   if(q)chart.querySelectorAll(".md").forEach(el=>markHits(el,q));lockMove(chart)}
 /* ---------- render ---------- */
+const shRO=p=>!!(p?.shared&&(!sh.ok||sh.err||sh.newVer||!me||sh.mine!==p.id)); // a shared project that can't be edited now
 function renderToolbar(){
   const ids=Object.keys(projects).sort((a,b)=>(projects[a].name||"").localeCompare(projects[b].name||""));
   $("projSel").innerHTML=ids.map(id=>`<option value="${esc(id)}"${id===curId?" selected":""}>${projects[id].shared?"👥 ":""}${esc(projects[id].name||"無題")}</option>`).join("")||`<option value="">プロジェクトなし</option>`;
   if(!storeRO)$("projSel").insertAdjacentHTML("beforeend",`<option value="+new">＋ 新しいプロジェクト</option>`); // v0.0.13: new projects from here (was a button in 設定)
   const p=projects[curId];
-  readOnly=storeRO||!!(p?.shared&&(!sh.ok||sh.err||sh.newVer||!me||sh.mine!==p.id)); // a shared project is edited only while this page holds its lock (the switch in the corner): read-only otherwise — also offline, after a newer version, without a name
+  readOnly=storeRO||shRO(p); // a shared project is edited only while this page holds its lock (the switch in the corner): read-only otherwise — also offline, after a newer version, without a name
   const ms=p?members(p):[];
   if(view.who&&!ms.includes(view.who))view.who="";
   $("whoSel").innerHTML=`<option value="">（全員）</option>`+ms.map(m=>`<option${m===view.who?" selected":""}>${esc(m)}</option>`).join("");
@@ -107,8 +108,7 @@ function renderToolbar(){
   const shLbl=!p?.shared?"":!sh.dir?"共有フォルダが未設定です（閲覧のみ）":!sh.ok?"共有フォルダ：画面をクリックすると接続します（閲覧のみ）"
     :sh.err?`共有フォルダに接続できません（最終取得 ${sh.at?new Date(sh.at).toTimeString().slice(0,5):"—"}）`
     :sh.newVer?`新しいバージョン ${sh.newVer} があります。Tempo.bat から開き直してください（それまで閲覧のみ）`:"共有フォルダと同期中";
-  const uns=Object.keys(retry).length>0; // a save failed and is being tried again (core.js flush)
-  $("modeLbl").textContent=store?(uns?"未保存の変更があります（再試行中）｜":"")+(storeRO?"閲覧のみ":shLbl||store.label):"";$("modeLbl").classList.toggle("warn",uns);
+  modeBase=store?(storeRO?"閲覧のみ":shLbl||store.label):"";modeShow();
   if(!p){$("stats").innerHTML=$("chips").innerHTML="";return}
   const {rows,pct,mn,mx}=overall(p);
   const cnt={};rows.forEach(r=>cnt[r.st]=(cnt[r.st]||0)+1);
@@ -274,6 +274,12 @@ function render(){
 }
 // overlay in two panes (v0.0.16): the lower pane and its divider show only while a project is overlaid on the chart; the upper pane's share is kept in mg.split
 const splitR=()=>{const v=+ls.get("mg.split");return v>=.15&&v<=.85?v:.5};
+// the label at the top (v0.0.18): reading the data / saving (core.js saveMark) with a small ring, ✓ when written, else where the data is kept; a failed save in orange
+let modeBase="";
+function modeShow(){const l=$("modeLbl"),uns=Object.keys(retry).length>0;l.classList.toggle("warn",uns);
+  if(!store)l.innerHTML='<i class="spin mini" aria-hidden="true"></i>読み込み中…';
+  else if(!uns&&saveSt)l.innerHTML=saveSt===1?'<i class="spin mini" aria-hidden="true"></i>保存中…':'<b class="ok" aria-hidden="true">✓</b>保存しました';
+  else l.textContent=(uns?"未保存の変更があります（再試行中）｜":"")+modeBase}
 function splitOn(on){const w=$("charts");w.classList.toggle("split",on);$("refBar").hidden=$("chartRef").hidden=!on;if(on){w.style.setProperty("--sp",splitR());$("refBar").setAttribute("aria-valuenow",Math.round(splitR()*100))}else $("chartRef").innerHTML=""}
 // the lock switch changed since the last drawing: lockBar drew its old state, now it moves
 function lockMove(c){const lb=c.querySelector(".sw.lock");if(lb&&lb.getAttribute("aria-pressed")!==lb.dataset.on){void lb.offsetWidth;lb.setAttribute("aria-pressed",lb.dataset.on)}}

@@ -15,7 +15,7 @@ function openTask(id){
   editingId=id;armReset();
   drawer.hidden=false;$("projForm").hidden=true;$("taskForm").hidden=false;setTgl();
   parOpts(all,r);FF.forEach(([k,get])=>fset(k,get(r,all)));formInit=Object.fromEntries(FF.map(([k])=>[k,fval(k)]));
-  ["f-s","f-sh","f-e","f-eh","f-p","f-ms","f-dv"].forEach(k=>$(k).disabled=!!r.parent||readOnly);$("f-pa").disabled=readOnly;
+  ["f-s","f-sh","f-e","f-eh","f-p","f-ms","f-dv","f-asNew"].forEach(k=>$(k).disabled=!!r.parent||readOnly);$("f-pa").disabled=readOnly;
   formExtras(r);
   fIcon=r.icon&&IMGF.test(r.icon.file)?{...r.icon}:null;fIcon0=icoN(fIcon);fPar=!!r.parent;$("f-icgal").hidden=true;icoForm();
   render();
@@ -26,7 +26,7 @@ const FF=[["f-pa",(r,all)=>parId(all,r)],["f-name",r=>r.name],["f-as",r=>r.assig
 const fval=k=>$(k).type==="checkbox"?$(k).checked:$(k).value;
 const fset=(k,v)=>{if($(k).type==="checkbox")$(k).checked=v;else $(k).value=v};
 let formInit={};
-function formExtras(r){$("f-po").textContent=$("f-p").value+"%";memChips();$("f-biz").textContent=r.parent?"子タスクから自動計算されます":bizHint()}
+function formExtras(r){$("f-po").textContent=$("f-p").value+"%";memChips(r.parent);$("f-biz").textContent=r.parent?"子タスクから自動計算されます":bizHint()}
 // names of the parents above the task, top first: where a new or moved task ended up, even when 成果物のみ hides them
 const parPath=(all,r)=>{const out=[];let L=r.level;for(let j=r.idx-1;j>=0&&L>0;j--)if(all[j].level<L){out.unshift(all[j].name);L=all[j].level}return out.join(" › ")};
 const setDv=(t,on)=>{if(on)t.deliverable=true;else delete t.deliverable}; // the deliverable tag is stored only when set, so old data stays as it was
@@ -37,7 +37,7 @@ const parId=(all,r)=>{for(let j=r.idx-1;j>=0&&r.level>0;j--)if(all[j].level<r.le
 function parOpts(all,r){const end=blockEnd(all,r.idx),blk=all.slice(r.idx,end+1),path=x=>(x.level?parPath(all,x)+" › ":"")+x.name;
   $("f-pa").innerHTML=`<option value="">（なし）</option>`+all.map(x=>x.level>2||isDv(x)||(x.level===2&&!x.parent)||(x.idx>=r.idx&&x.idx<=end)?"":`<option value="${esc(x.id)}"${deep(blk,x.level+1-r.level)?" disabled":""}>${esc(path(x))}</option>`).join("")}
 function syncForm(){
-  if($("taskForm").hidden||!editingId)return;const all=derive(projects[curId]),r=all.find(x=>x.id===editingId);if(!r)return;
+  if($("taskForm").hidden||!editingId)return;$("taskDel").hidden=readOnly;const all=derive(projects[curId]),r=all.find(x=>x.id===editingId);if(!r)return;
   const pv=$("f-pa").value;parOpts(all,r);$("f-pa").value=pv;if($("f-pa").selectedIndex<0)$("f-pa").value=formInit["f-pa"]=parId(all,r); // the picked parent is gone: back to where the task is
   let ch=false;FF.forEach(([k,get])=>{const v=get(r,all);if(fval(k)===formInit[k]&&v!==formInit[k]){fset(k,v);formInit[k]=v;ch=true}});
   if(ch)formExtras(r);
@@ -55,8 +55,8 @@ $("f-s").addEventListener("input",()=>{if($("f-e").value<$("f-s").value)$("f-e")
 ["f-e","f-sh","f-eh"].forEach(k=>$(k).addEventListener("input",()=>$("f-biz").textContent=bizHint()));
 $("f-p").addEventListener("input",()=>$("f-po").textContent=$("f-p").value+"%");
 /* member roster: kept per project, picked from in the task form */
-function memChips(){const p=projects[curId],cur=names($("f-as").value);
-  $("f-mem").innerHTML=[...new Set([...roster(p),...cur])].map(n=>`<button type="button" class="chip" data-mem="${esc(n)}" aria-pressed="${cur.includes(n)}">${esc(n)}</button>`).join("")}
+function memChips(par){const p=projects[curId],cur=names($("f-as").value); // par: a parent's 担当 is the sum of its sub-tasks — shown, not picked (v0.0.18)
+  $("f-mem").innerHTML=[...new Set([...roster(p),...cur])].map(n=>`<button type="button" class="chip" data-mem="${esc(n)}" aria-pressed="${cur.includes(n)}"${par?' disabled title="子タスクの担当者の合計です"':""}>${esc(n)}</button>`).join("")}
 // a name off the roster: typed below the names and added with Enter (v0.0.13 — the names are the way to pick; f-as holds the list)
 $("f-asNew").addEventListener("keydown",e=>{if(e.key!=="Enter")return;e.preventDefault();$("f-as").value=[...new Set([...names($("f-as").value),...names(e.target.value)])].join("、");e.target.value="";memChips()});
 $("f-mem").addEventListener("click",e=>{const b=e.target.closest("[data-mem]");if(!b)return;const n=b.dataset.mem,cur=names($("f-as").value);
@@ -120,8 +120,10 @@ $("f-icgal").addEventListener("click",e=>{const b=e.target.closest("[data-icf]")
 $("f-icdel").addEventListener("click",()=>{fIcon=null;icoForm()});
 $("f-dv").addEventListener("change",icoForm); // a deliverable's icon is square
 $("taskDel").addEventListener("click",e=>{
-  const b=e.currentTarget;if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="もう一度押すと削除";return}
-  const p=projects[curId];p.tasks=p.tasks.filter(t=>t.id!==editingId);save(p);closeDrawer();toast("削除しました");
+  const b=e.currentTarget;if(readOnly)return;if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="もう一度押すと削除";return}
+  const p=projects[curId],i=p.tasks.findIndex(t=>t.id===editingId);if(i<0)return closeDrawer();
+  const kill=new Set(p.tasks.slice(i,blockEnd(p.tasks,i)+1).map(t=>t.id)); // with what is under it, as the toolbar's 削除 does (v0.0.18: its sub-tasks were left, and fell under the task above)
+  p.tasks=p.tasks.filter(t=>!kill.has(t.id));save(p);closeDrawer();toast(kill.size>1?`${kill.size} 件を削除しました（子タスクを含む）`:"削除しました");
 });
 $("projForm").addEventListener("submit",e=>e.preventDefault());
 // project name (v0.0.13): saved when it is left (Enter or a click elsewhere) — no button of its own
@@ -133,7 +135,9 @@ $("p-copy").addEventListener("click",()=>{const v=$("p-json").value;navigator.cl
 function replaceData(d,xl){
   const p=projects[curId];if(!p||readOnly)return;const tasks=Array.isArray(d)?d:d.tasks;if(!Array.isArray(tasks))throw 0;
   const was=Object.fromEntries(p.tasks.map(t=>[t.id,t.icon])),icoIn=i=>i&&IMGF.test(i.file)?{icon:JSON.parse(icoN(i))}:{};
-  p.tasks=tasks.filter(t=>t&&t.name&&isDay(t.start)&&isDay(t.end)).map(t=>({id:t.id?String(t.id):uid(),name:String(t.name),start:t.start,end:t.end,progress:Math.max(0,Math.min(100,+t.progress||0)),assignees:Array.isArray(t.assignees)?t.assignees.map(String):[],level:+t.level||0,milestone:!!t.milestone,memo:t.memo||"",deps:Array.isArray(t.deps)?t.deps.map(String):[],...(isHex(t.color)?{color:t.color}:{}),...(t.deliverable?{deliverable:true}:{}),...(t.startPM?{startPM:true}:{}),...(t.endAM?{endAM:true}:{}),...icoIn(t.icon||xl&&was[String(t.id)])}));
+  // v0.0.18: what is read in is put right — a date that does not exist is not a date, an end before the start ends on the start, an id used twice gets a new one, levels are 0–3 and at most one deeper than the row above
+  const real=s=>typeof s==="string"&&isDay(s)&&S(D(s))===s,ids=new Set(),nid=t=>{let id=t.id?String(t.id):uid();if(ids.has(id))id=uid();ids.add(id);return id};let lv=-1;
+  p.tasks=tasks.filter(t=>t&&t.name&&real(t.start)&&real(t.end)).map(t=>({id:nid(t),name:String(t.name),start:t.start,end:t.end<t.start?t.start:t.end,progress:Math.max(0,Math.min(100,+t.progress||0)),assignees:Array.isArray(t.assignees)?t.assignees.map(String):[],level:lv=Math.max(0,Math.min(3,lv+1,Math.round(+t.level||0))),milestone:!!t.milestone,memo:t.memo||"",deps:Array.isArray(t.deps)?t.deps.map(String):[],...(isHex(t.color)?{color:t.color}:{}),...(t.deliverable?{deliverable:true}:{}),...(t.startPM?{startPM:true}:{}),...(t.endAM?{endAM:true}:{}),...icoIn(t.icon||xl&&was[String(t.id)])}));
   if(Array.isArray(d.milestones))p.milestones=d.milestones.filter(m=>m&&isDay(m.date)).map(m=>({id:m.id||uid(),date:m.date,title:String(m.title||""),color:MSC.includes(m.color)?m.color:"blue"}));
   if(Array.isArray(d.members))p.members=d.members.map(String);
   if(Array.isArray(d.holidays))p.holidays=d.holidays.filter(h=>h&&isDay(h.date)).map(h=>({date:h.date,color:isHex(h.color)?h.color:HOLC}));
@@ -219,8 +223,9 @@ async function readBackup(f){
 async function restoreBackup(all){
   // keep the state before the restore in one file, overwritten each time: auto.backup.json is about to hold the restored data
   const pre="before-restore.backup.json";let kept=false;if(bk.ok)try{await bkWrite(pre);kept=true}catch(err){}
-  Object.entries(all).forEach(([id,p])=>{projects[id]={id,name:String(p.name||"無題"),tasks:p.tasks,milestones:Array.isArray(p.milestones)?p.milestones:[],holidays:Array.isArray(p.holidays)?p.holidays:[],...(Array.isArray(p.members)?{members:p.members}:{}),...(Array.isArray(p.notes)?{notes:p.notes}:{}),...(projects[id]?.shared?{shared:true,rev:projects[id].rev}:{})};save(projects[id])});
-  closeDrawer();toast(`${Object.keys(all).length} 件のプロジェクトを復元しました`+(kept?`（復元前の状態は ${pre} に保存）`:""));
+  let skip=0; // a shared project is restored only while it can be edited — under my lock (v0.0.18; the save took the lock by itself)
+  Object.entries(all).forEach(([id,p])=>{if(shRO(projects[id])){skip++;return}projects[id]={id,name:String(p.name||"無題"),tasks:p.tasks,milestones:Array.isArray(p.milestones)?p.milestones:[],holidays:Array.isArray(p.holidays)?p.holidays:[],...(Array.isArray(p.members)?{members:p.members}:{}),...(Array.isArray(p.notes)?{notes:p.notes}:{}),...(projects[id]?.shared?{shared:true,rev:projects[id].rev}:{})};save(projects[id])});
+  closeDrawer();toast(`${Object.keys(all).length-skip} 件のプロジェクトを復元しました`+(kept?`（復元前の状態は ${pre} に保存）`:"")+(skip?`。共有プロジェクト ${skip} 件は、ロックしていないため復元しませんでした`:""));
 }
 $("bk-file").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f||storeRO)return;const all=await readBackup(f);if(all)restoreBackup(all)});
 /* drop a backup file anywhere on the page = バックアップから復元, after a confirmation that says what it will replace (a drop is easy to do by mistake) */
@@ -345,7 +350,8 @@ chart.addEventListener("click",e=>{
     return}
   const lk=e.target.closest("[data-lk]");if(lk){const id=curId;leaveMemo(); // edit lock, the switch in the corner: mine = end editing / nobody's = take it / someone else's = release (twice)
     if(lk.dataset.lk==="end")shEnd(true).then(ok=>{render();toast(ok?"編集を終了しました":"未保存の変更があります。保存が終わるまで編集を終了できません")});
-    else if(lk.dataset.lk==="take")shTake(id).then(()=>{render();toast(sh.bare?"ロックのファイルを作れなかったため、ロックなしで編集します":"編集を始めました（ほかの人は閲覧のみ）")},err=>{render();toast(err.code==="locked"?`${err.by||"ほかの人"}さんが編集中です`:`ロックできませんでした（${err&&err.name||"Error"}）`)}); // the switch, off: lock, read the latest, and editing starts
+    else if(lk.dataset.lk==="take")shTake(id).then(()=>{render();if(view.memo&&curId===id)editMemo();toast( // in メモ the lock is taken to write: straight into editing the page (v0.0.18)
+      sh.bare?"ロックのファイルを作れなかったため、ロックなしで編集します":"編集を始めました（ほかの人は閲覧のみ）")},err=>{render();toast(err.code==="locked"?`${err.by||"ほかの人"}さんが編集中です`:`ロックできませんでした（${err&&err.name||"Error"}）`)}); // the switch, off: lock, read the latest, and editing starts
     else if(!lkArmed){lkArmed=true;render()}
     else{lkArmed=false;shForce(id).then(()=>{render();toast("ロックを解除しました")},()=>toast("ロックを解除できませんでした"))}
     return}
@@ -672,7 +678,8 @@ function cmd(c){
   if(c!=="del")delArmed=false;
   if(leafView()&&(c==="indent"||c==="outdent")){toast("階層の変更は「成果物のみ」を解除してから行ってください");return} // the row above / below in the data may be hidden here: a row would turn into a hidden parent and vanish (same reason as no drop "into" a row)
   switch(c){
-    case"copy":{if(!idx.length)return;const bl=topBlocks(p).flatMap(i=>ts.slice(i,blockEnd(ts,i)+1));clip=structuredClone(bl);toast(`${clip.length} 件をコピーしました`);renderTools();return}
+    case"copy":{if(!idx.length)return;clip=topBlocks(p).flatMap(i=>{const L=ts[i].level||0;return structuredClone(ts.slice(i,blockEnd(ts,i)+1)).map(t=>(t.level=(t.level||0)-L,t))}); // each block from level 0: pasted, every block's top sits on the level it is pasted at (v0.0.18)
+      toast(`${clip.length} 件をコピーしました`);renderTools();return}
     case"paste":{if(!clip)return;const map={};const items=clip.map(t=>{const n={...structuredClone(t),id:uid()};map[t.id]=n.id;return n});
       items.forEach(t=>{t.deps=(t.deps||[]).map(d=>map[d]).filter(Boolean)});
       const at=last>=0?last+1:ts.length,off=(lastTop?.level||0)-(items[0].level||0);
@@ -684,11 +691,14 @@ function cmd(c){
     case"indent":{topBlocks(p).forEach(i=>{const L=ts[i].level||0;if(i===0||(ts[i-1].level||0)<L)return;const j=blockEnd(ts,i);
         if(deep(ts.slice(i,j+1),1)){toast("これ以上深い階層にはできません");return} // the deepest task under it counts, not only the row itself
         for(let k=i;k<=j;k++)ts[k].level=(ts[k].level||0)+1});save(p);return}
-    case"outdent":{topBlocks(p).forEach(i=>{if(!(ts[i].level>0))return;const j=blockEnd(ts,i);for(let k=i;k<=j;k++)ts[k].level--});save(p);return}
-    case"up":case"down":{const i=topBlocks(p)[0];if(i==null)return;const L=ts[i].level||0,j=blockEnd(ts,i);
-      if(c==="up"){let k=i-1;while(k>=0&&(ts[k].level||0)>L)k--;if(k<0||(ts[k].level||0)<L)return;const blk=ts.splice(i,j-i+1);ts.splice(k,0,...blk)}
-      else{const n=j+1;if(n>=ts.length||(ts[n].level||0)!==L)return;const m=blockEnd(ts,n);const blk=ts.splice(i,j-i+1);ts.splice(m-(j-i),0,...blk)}
-      save(p);return}
+    case"outdent":{topBlocks(p).map(i=>ts[i].id).reverse().forEach(id=>{const i=ts.findIndex(t=>t.id===id),L=ts[i].level||0;if(!L)return; // last first: several raised together keep their order
+        let k=i-1;while(k>=0&&(ts[k].level||0)>=L)k--; // its parent
+        const blk=ts.splice(i,blockEnd(ts,i)-i+1);blk.forEach(t=>t.level--);ts.splice(k<0?i:blockEnd(ts,k)+1,0,...blk)});save(p);return} // put after its old parent's block: the tasks that followed it stay under that parent (v0.0.18; they fell under the raised task)
+    case"up":case"down":{const tops=topBlocks(p).map(i=>ts[i].id),on=new Set(tops);let n=0; // every selected block one step (v0.0.18; was the first only); never past another selected one, so blocks side by side move as a group
+      (c==="up"?tops:tops.reverse()).forEach(id=>{const i=ts.findIndex(t=>t.id===id),L=ts[i].level||0,j=blockEnd(ts,i);
+        if(c==="up"){let k=i-1;while(k>=0&&(ts[k].level||0)>L)k--;if(k<0||(ts[k].level||0)<L||on.has(ts[k].id))return;const blk=ts.splice(i,j-i+1);ts.splice(k,0,...blk)}
+        else{const x=j+1;if(x>=ts.length||(ts[x].level||0)!==L||on.has(ts[x].id))return;const m=blockEnd(ts,x);const blk=ts.splice(i,j-i+1);ts.splice(m-(j-i),0,...blk)}
+        n++});if(n)save(p);return}
     case"link":{const par=new Set(derive(p).filter(r=>r.parent).map(r=>r.id)),ids=[...sel].map(id=>ts.find(t=>t.id===id)).filter(t=>t&&!par.has(t.id)); /* in the order they were selected */if(ids.length<2){toast("子タスクのない行を 2 つ以上選んでください");return}
       const byId=Object.fromEntries(ts.map(t=>[t.id,t]));let n=0; // a link that would close a loop (A→B→A) is left out
       for(let k=1;k<ids.length;k++)if(!reach(byId,ids[k-1].id,ids[k].id)){ids[k].deps=[...new Set([...(ids[k].deps||[]),ids[k-1].id])];n++}
